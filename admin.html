@@ -7,7 +7,6 @@
 
     <title>Admin Dashboard</title>
 
-    <!-- Admin CSS -->
     <link rel="stylesheet" href="admin.css">
 </head>
 
@@ -21,9 +20,7 @@
 
         <div class="login-card">
 
-            <div class="login-logo">
-                🔐
-            </div>
+            <div class="login-logo">🔐</div>
 
             <h1>Admin Dashboard</h1>
 
@@ -36,6 +33,7 @@
                 <label>Username</label>
 
                 <div class="input-box">
+
                     <span>👤</span>
 
                     <input
@@ -44,6 +42,7 @@
                         placeholder="Enter username"
                         autocomplete="username"
                     >
+
                 </div>
 
             </div>
@@ -54,6 +53,7 @@
                 <label>Password</label>
 
                 <div class="input-box">
+
                     <span>🔑</span>
 
                     <input
@@ -62,6 +62,7 @@
                         placeholder="Enter password"
                         autocomplete="current-password"
                     >
+
                 </div>
 
             </div>
@@ -104,8 +105,13 @@
                 </div>
 
                 <div>
+
                     <h2>Video Admin</h2>
-                    <span>Management Dashboard</span>
+
+                    <span>
+                        Management Dashboard
+                    </span>
+
                 </div>
 
             </div>
@@ -132,7 +138,7 @@
         </header>
 
 
-        <!-- MAIN CONTENT -->
+        <!-- MAIN -->
 
         <main class="dashboard-content">
 
@@ -142,7 +148,9 @@
 
                 <div>
 
-                    <h1>Welcome, Admin 👋</h1>
+                    <h1>
+                        Welcome, Admin 👋
+                    </h1>
 
                     <p>
                         Manage your videos, thumbnails and categories from here.
@@ -164,10 +172,15 @@
                     </div>
 
                     <div>
-                        <span>Total Uploaded</span>
+
+                        <span>
+                            Total Uploaded
+                        </span>
+
                         <strong id="totalUploaded">
                             0
                         </strong>
+
                     </div>
 
                 </div>
@@ -180,10 +193,15 @@
                     </div>
 
                     <div>
-                        <span>Categories</span>
+
+                        <span>
+                            Categories
+                        </span>
+
                         <strong>
                             4
                         </strong>
+
                     </div>
 
                 </div>
@@ -196,10 +214,15 @@
                     </div>
 
                     <div>
-                        <span>Selected</span>
+
+                        <span>
+                            Selected
+                        </span>
+
                         <strong id="dashboardSelected">
                             0
                         </strong>
+
                     </div>
 
                 </div>
@@ -207,7 +230,9 @@
             </div>
 
 
-            <!-- UPLOAD SECTION -->
+            <!-- =========================
+                 MULTI UPLOAD
+            ========================== -->
 
             <section class="panel-card">
 
@@ -216,11 +241,11 @@
                     <div>
 
                         <h2>
-                            ⬆️ Upload New Video
+                            ⬆️ Upload Videos
                         </h2>
 
                         <p>
-                            Add a new video to your website.
+                            Upload up to 3 videos at once.
                         </p>
 
                     </div>
@@ -233,127 +258,484 @@
                     class="upload-form"
                 >
 
-                    <div class="form-row">
+                    <!-- VIDEO 1 -->
 
-                        <div class="form-group">
+                    <div class="multi-upload-card">
 
-                            <label>
-                                Video Title
-                            </label>
+                        <div class="upload-card-title">
 
-                            <input
-                                type="text"
-                                id="title"
-                                placeholder="Enter video title"
-                                required
-                            >
+                            <span>
+                                🎬 Video 1
+                            </span>
 
                         </div>
 
 
-                        <div class="form-group">
+                        <div class="form-row">
 
-                            <label>
-                                Category
-                            </label>
+                            <div class="form-group">
 
-                            <select
-                                id="category"
-                                required
-                            >
+                                <label>
+                                    Video Title
+                                </label>
 
-                                <option value="">
-                                    Select Category
-                                </option>
+                                <input
+                                    type="text"
+                                    id="title1"
+                                    placeholder="Enter video title"
+                                >
 
-                                <option value="Japanese Mom">
-                                    🇯🇵 Japanese Mom
-                                </option>
+                            </div>
 
-                                <option value="Brazzur Mom">
-                                    ⭐ Brazzur Mom
-                                </option>
 
-                                <option value="Bangladesh Video">
-                                    🇧🇩 Bangladesh Video
-                                </option>
+                            <div class="form-group">
 
-                                <option value="Indian Video">
-                                    🇮🇳 Indian Video
-                                </option>
+                                <label>
+                                    Category
+                                </label>
 
-                            </select>
+                                <select id="category1">
+
+                                    <option value="">
+                                        Select Category
+                                    </option>
+
+                                    <option value="Japanese Mom">
+                                        🇯🇵 Japanese Mom
+                                    </option>
+
+                                    <option value="Brazzur Mom">
+                                        ⭐ Brazzur Mom
+                                    </option>
+
+                                    <option value="Bangladesh Video">
+                                        🇧🇩 Bangladesh Video
+                                    </option>
+
+                                    <option value="Indian Video">
+                                        🇮🇳 Indian Video
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="file-row">
+
+                            <div class="file-box">
+
+                                <div class="file-icon">
+                                    🖼️
+                                </div>
+
+                                <div>
+
+                                    <h3>
+                                        Thumbnail
+                                    </h3>
+
+                                    <p>
+                                        JPG, PNG or WEBP
+                                    </p>
+
+                                    <input
+                                        type="file"
+                                        id="thumbnail1"
+                                        accept="image/*"
+                                    >
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="file-box">
+
+                                <div class="file-icon">
+                                    🎥
+                                </div>
+
+                                <div>
+
+                                    <h3>
+                                        Video File
+                                    </h3>
+
+                                    <p>
+                                        MP4, WebM or other video
+                                    </p>
+
+                                    <input
+                                        type="file"
+                                        id="video1"
+                                        accept="video/*"
+                                    >
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="upload-status">
+
+                            <div class="progress-info">
+
+                                <span>
+                                    Upload Progress
+                                </span>
+
+                                <strong id="progressText1">
+                                    0%
+                                </strong>
+
+                            </div>
+
+
+                            <div class="progress-bar">
+
+                                <div
+                                    id="progressBar1"
+                                    class="progress-fill"
+                                ></div>
+
+                            </div>
+
+
+                            <p id="status1">
+                                Waiting...
+                            </p>
 
                         </div>
 
                     </div>
 
 
-                    <div class="file-row">
+                    <!-- VIDEO 2 -->
 
-                        <div class="file-box">
+                    <div class="multi-upload-card">
 
-                            <div class="file-icon">
-                                🖼️
-                            </div>
+                        <div class="upload-card-title">
 
-                            <div>
+                            <span>
+                                🎬 Video 2
+                            </span>
 
-                                <h3>
-                                    Video Thumbnail
-                                </h3>
+                        </div>
 
-                                <p>
-                                    JPG, PNG or WEBP
-                                </p>
+
+                        <div class="form-row">
+
+                            <div class="form-group">
+
+                                <label>
+                                    Video Title
+                                </label>
 
                                 <input
-                                    type="file"
-                                    id="thumbnail"
-                                    accept="image/*"
-                                    required
+                                    type="text"
+                                    id="title2"
+                                    placeholder="Enter video title"
                                 >
+
+                            </div>
+
+
+                            <div class="form-group">
+
+                                <label>
+                                    Category
+                                </label>
+
+                                <select id="category2">
+
+                                    <option value="">
+                                        Select Category
+                                    </option>
+
+                                    <option value="Japanese Mom">
+                                        🇯🇵 Japanese Mom
+                                    </option>
+
+                                    <option value="Brazzur Mom">
+                                        ⭐ Brazzur Mom
+                                    </option>
+
+                                    <option value="Bangladesh Video">
+                                        🇧🇩 Bangladesh Video
+                                    </option>
+
+                                    <option value="Indian Video">
+                                        🇮🇳 Indian Video
+                                    </option>
+
+                                </select>
 
                             </div>
 
                         </div>
 
 
-                        <div class="file-box">
+                        <div class="file-row">
 
-                            <div class="file-icon">
-                                🎥
+                            <div class="file-box">
+
+                                <div class="file-icon">
+                                    🖼️
+                                </div>
+
+                                <div>
+
+                                    <h3>
+                                        Thumbnail
+                                    </h3>
+
+                                    <p>
+                                        JPG, PNG or WEBP
+                                    </p>
+
+                                    <input
+                                        type="file"
+                                        id="thumbnail2"
+                                        accept="image/*"
+                                    >
+
+                                </div>
+
                             </div>
 
-                            <div>
 
-                                <h3>
-                                    Video File
-                                </h3>
+                            <div class="file-box">
 
-                                <p>
-                                    MP4, WebM or other video
-                                </p>
+                                <div class="file-icon">
+                                    🎥
+                                </div>
 
-                                <input
-                                    type="file"
-                                    id="video"
-                                    accept="video/*"
-                                    required
-                                >
+                                <div>
+
+                                    <h3>
+                                        Video File
+                                    </h3>
+
+                                    <p>
+                                        MP4, WebM or other video
+                                    </p>
+
+                                    <input
+                                        type="file"
+                                        id="video2"
+                                        accept="video/*"
+                                    >
+
+                                </div>
 
                             </div>
+
+                        </div>
+
+
+                        <div class="upload-status">
+
+                            <div class="progress-info">
+
+                                <span>
+                                    Upload Progress
+                                </span>
+
+                                <strong id="progressText2">
+                                    0%
+                                </strong>
+
+                            </div>
+
+
+                            <div class="progress-bar">
+
+                                <div
+                                    id="progressBar2"
+                                    class="progress-fill"
+                                ></div>
+
+                            </div>
+
+
+                            <p id="status2">
+                                Waiting...
+                            </p>
 
                         </div>
 
                     </div>
 
+
+                    <!-- VIDEO 3 -->
+
+                    <div class="multi-upload-card">
+
+                        <div class="upload-card-title">
+
+                            <span>
+                                🎬 Video 3
+                            </span>
+
+                        </div>
+
+
+                        <div class="form-row">
+
+                            <div class="form-group">
+
+                                <label>
+                                    Video Title
+                                </label>
+
+                                <input
+                                    type="text"
+                                    id="title3"
+                                    placeholder="Enter video title"
+                                >
+
+                            </div>
+
+
+                            <div class="form-group">
+
+                                <label>
+                                    Category
+                                </label>
+
+                                <select id="category3">
+
+                                    <option value="">
+                                        Select Category
+                                    </option>
+
+                                    <option value="Japanese Mom">
+                                        🇯🇵 Japanese Mom
+                                    </option>
+
+                                    <option value="Brazzur Mom">
+                                        ⭐ Brazzur Mom
+                                    </option>
+
+                                    <option value="Bangladesh Video">
+                                        🇧🇩 Bangladesh Video
+                                    </option>
+
+                                    <option value="Indian Video">
+                                        🇮🇳 Indian Video
+                                    </option>
+
+                                </select>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="file-row">
+
+                            <div class="file-box">
+
+                                <div class="file-icon">
+                                    🖼️
+                                </div>
+
+                                <div>
+
+                                    <h3>
+                                        Thumbnail
+                                    </h3>
+
+                                    <p>
+                                        JPG, PNG or WEBP
+                                    </p>
+
+                                    <input
+                                        type="file"
+                                        id="thumbnail3"
+                                        accept="image/*"
+                                    >
+
+                                </div>
+
+                            </div>
+
+
+                            <div class="file-box">
+
+                                <div class="file-icon">
+                                    🎥
+                                </div>
+
+                                <div>
+
+                                    <h3>
+                                        Video File
+                                    </h3>
+
+                                    <p>
+                                        MP4, WebM or other video
+                                    </p>
+
+                                    <input
+                                        type="file"
+                                        id="video3"
+                                        accept="video/*"
+                                    >
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="upload-status">
+
+                            <div class="progress-info">
+
+                                <span>
+                                    Upload Progress
+                                </span>
+
+                                <strong id="progressText3">
+                                    0%
+                                </strong>
+
+                            </div>
+
+
+                            <div class="progress-bar">
+
+                                <div
+                                    id="progressBar3"
+                                    class="progress-fill"
+                                ></div>
+
+                            </div>
+
+
+                            <p id="status3">
+                                Waiting...
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- UPLOAD BUTTON -->
 
                     <button
                         type="submit"
                         class="upload-btn"
                     >
-                        ⬆️ Upload Video
+                        🚀 Upload Selected Videos
                     </button>
 
 
@@ -367,7 +749,9 @@
             </section>
 
 
-            <!-- MANAGE VIDEOS -->
+            <!-- =========================
+                 MANAGE VIDEOS
+            ========================== -->
 
             <section class="panel-card">
 
@@ -391,8 +775,6 @@
 
                 </div>
 
-
-                <!-- CONTROLS -->
 
                 <div class="manage-controls">
 
@@ -430,13 +812,16 @@
                 </div>
 
 
-                <!-- VIDEO LIST -->
-
                 <div id="adminVideoList">
 
                     <div class="loading-box">
+
                         <div class="loader"></div>
-                        <p>Loading uploaded videos...</p>
+
+                        <p>
+                            Loading uploaded videos...
+                        </p>
+
                     </div>
 
                 </div>
@@ -445,8 +830,6 @@
 
         </main>
 
-
-        <!-- FOOTER -->
 
         <footer class="admin-footer">
 
