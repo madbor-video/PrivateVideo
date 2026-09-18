@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Private Video Lock</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="login-page">
+
+    <div class="login-container">
+
+        <div class="lock-icon">
+            🔒
+        </div>
+
+        <div class="login-card">
+
+            <div class="private-label">
+                PRIVATE ACCESS
+            </div>
+
+            <h1>
+                Private Video Lock
+            </h1>
+
+            <p>
+                Site open korte username and password din.
+            </p>
+
+            <form id="loginForm">
+
+                <label>
+                    Username
+                </label>
+
+                <input
+                    type="text"
+                    id="username"
+                    placeholder="Username"
+                    autocomplete="username"
+                    required
+                >
+
+                <label>
+                    Password
+                </label>
+
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Password"
+                    autocomplete="current-password"
+                    required
+                >
+
+                <button type="submit" class="login-btn">
+                    Unlock Website
+                </button>
+
+            </form>
+
+            <div id="loginError" class="login-error">
+                Wrong username or password.
+            </div>
+
+            <div class="login-footer">
+                🔐 Private Members Area
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        document.getElementById("loginForm").addEventListener("submit", function(event) {
+
+            event.preventDefault();
+
+            const username =
+                document.getElementById("username").value.trim();
+
+            const password =
+                document.getElementById("password").value;
+
+            const error =
+                document.getElementById("loginError");
+
+            if (username === "mom" && password === "2580") {
+
+                sessionStorage.setItem("videoAuth", "true");
+
+                window.location.href = "index.html";
+
+            } else {
+
+                error.style.display = "block";
+
+            }
+
+        });
+    </script>
+
+</body>
+
+</html>

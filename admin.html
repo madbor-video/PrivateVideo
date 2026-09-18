@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard</title>
+
+    <!-- Admin CSS -->
+    <link rel="stylesheet" href="admin.css">
+</head>
+
+<body>
+
+    <!-- =========================
+         ADMIN LOGIN
+    ========================== -->
+
+    <div id="adminLogin" class="login-page">
+
+        <div class="login-card">
+
+            <div class="login-logo">
+                🔐
+            </div>
+
+            <h1>Admin Dashboard</h1>
+
+            <p class="login-subtitle">
+                Secure administrator login
+            </p>
+
+            <div class="input-group">
+
+                <label>Username</label>
+
+                <div class="input-box">
+                    <span>👤</span>
+
+                    <input
+                        type="text"
+                        id="adminUsername"
+                        placeholder="Enter username"
+                        autocomplete="username"
+                    >
+                </div>
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label>Password</label>
+
+                <div class="input-box">
+                    <span>🔑</span>
+
+                    <input
+                        type="password"
+                        id="adminPassword"
+                        placeholder="Enter password"
+                        autocomplete="current-password"
+                    >
+                </div>
+
+            </div>
+
+
+            <button
+                class="login-btn"
+                onclick="adminLogin()"
+            >
+                <span>🔓</span>
+                Login to Dashboard
+            </button>
+
+
+            <p id="loginMessage" class="message"></p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =========================
+         ADMIN DASHBOARD
+    ========================== -->
+
+    <div
+        id="uploadPanel"
+        class="dashboard"
+        style="display:none;"
+    >
+
+        <!-- TOP BAR -->
+
+        <header class="topbar">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    🎬
+                </div>
+
+                <div>
+                    <h2>Video Admin</h2>
+                    <span>Management Dashboard</span>
+                </div>
+
+            </div>
+
+
+            <div class="top-actions">
+
+                <a
+                    href="index.html"
+                    class="website-btn"
+                >
+                    🌐 Website
+                </a>
+
+                <button
+                    class="logout-btn"
+                    onclick="adminLogout()"
+                >
+                    🚪 Logout
+                </button>
+
+            </div>
+
+        </header>
+
+
+        <!-- MAIN CONTENT -->
+
+        <main class="dashboard-content">
+
+            <!-- WELCOME -->
+
+            <div class="welcome">
+
+                <div>
+
+                    <h1>Welcome, Admin 👋</h1>
+
+                    <p>
+                        Manage your videos, thumbnails and categories from here.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <!-- STAT CARDS -->
+
+            <div class="stats-grid">
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        🎬
+                    </div>
+
+                    <div>
+                        <span>Total Uploaded</span>
+                        <strong id="totalUploaded">
+                            0
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        📂
+                    </div>
+
+                    <div>
+                        <span>Categories</span>
+                        <strong>
+                            4
+                        </strong>
+                    </div>
+
+                </div>
+
+
+                <div class="stat-card">
+
+                    <div class="stat-icon">
+                        ☑️
+                    </div>
+
+                    <div>
+                        <span>Selected</span>
+                        <strong id="dashboardSelected">
+                            0
+                        </strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- UPLOAD SECTION -->
+
+            <section class="panel-card">
+
+                <div class="panel-header">
+
+                    <div>
+
+                        <h2>
+                            ⬆️ Upload New Video
+                        </h2>
+
+                        <p>
+                            Add a new video to your website.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <form
+                    id="uploadForm"
+                    class="upload-form"
+                >
+
+                    <div class="form-row">
+
+                        <div class="form-group">
+
+                            <label>
+                                Video Title
+                            </label>
+
+                            <input
+                                type="text"
+                                id="title"
+                                placeholder="Enter video title"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-group">
+
+                            <label>
+                                Category
+                            </label>
+
+                            <select
+                                id="category"
+                                required
+                            >
+
+                                <option value="">
+                                    Select Category
+                                </option>
+
+                                <option value="Japanese Mom">
+                                    🇯🇵 Japanese Mom
+                                </option>
+
+                                <option value="Brazzur Mom">
+                                    ⭐ Brazzur Mom
+                                </option>
+
+                                <option value="Bangladesh Video">
+                                    🇧🇩 Bangladesh Video
+                                </option>
+
+                                <option value="Indian Video">
+                                    🇮🇳 Indian Video
+                                </option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="file-row">
+
+                        <div class="file-box">
+
+                            <div class="file-icon">
+                                🖼️
+                            </div>
+
+                            <div>
+
+                                <h3>
+                                    Video Thumbnail
+                                </h3>
+
+                                <p>
+                                    JPG, PNG or WEBP
+                                </p>
+
+                                <input
+                                    type="file"
+                                    id="thumbnail"
+                                    accept="image/*"
+                                    required
+                                >
+
+                            </div>
+
+                        </div>
+
+
+                        <div class="file-box">
+
+                            <div class="file-icon">
+                                🎥
+                            </div>
+
+                            <div>
+
+                                <h3>
+                                    Video File
+                                </h3>
+
+                                <p>
+                                    MP4, WebM or other video
+                                </p>
+
+                                <input
+                                    type="file"
+                                    id="video"
+                                    accept="video/*"
+                                    required
+                                >
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <button
+                        type="submit"
+                        class="upload-btn"
+                    >
+                        ⬆️ Upload Video
+                    </button>
+
+
+                    <p
+                        id="uploadMessage"
+                        class="message"
+                    ></p>
+
+                </form>
+
+            </section>
+
+
+            <!-- MANAGE VIDEOS -->
+
+            <section class="panel-card">
+
+                <div class="panel-header manage-header">
+
+                    <div>
+
+                        <h2>
+                            🗂️ Manage Uploaded Videos
+                        </h2>
+
+                        <p>
+                            Select videos and permanently delete them.
+                        </p>
+
+                    </div>
+
+                    <div class="danger-note">
+                        ⚠️ Delete is permanent
+                    </div>
+
+                </div>
+
+
+                <!-- CONTROLS -->
+
+                <div class="manage-controls">
+
+                    <label class="select-all">
+
+                        <input
+                            type="checkbox"
+                            id="selectAllVideos"
+                            onchange="toggleSelectAll()"
+                        >
+
+                        <span>
+                            Select All
+                        </span>
+
+                    </label>
+
+
+                    <div class="manage-right">
+
+                        <span id="selectedCount">
+                            0 video selected
+                        </span>
+
+                        <button
+                            type="button"
+                            onclick="deleteSelectedVideos()"
+                            class="delete-selected-btn"
+                        >
+                            🗑️ Delete Selected
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- VIDEO LIST -->
+
+                <div id="adminVideoList">
+
+                    <div class="loading-box">
+                        <div class="loader"></div>
+                        <p>Loading uploaded videos...</p>
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+
+        <!-- FOOTER -->
+
+        <footer class="admin-footer">
+
+            <span>
+                🎬 Video Admin Dashboard
+            </span>
+
+            <span>
+                Secure Management Panel
+            </span>
+
+        </footer>
+
+    </div>
+
+
+    <script src="admin.js"></script>
+
+</body>
+
+</html>

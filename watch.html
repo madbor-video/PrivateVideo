@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Watch Video - Private Video Hub</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+    <!-- LOGIN PROTECTION -->
+
+    <script>
+
+        if (
+            sessionStorage.getItem("videoAuth") !== "true"
+        ) {
+            window.location.href = "login.html";
+        }
+
+    </script>
+
+
+    <!-- HEADER -->
+
+    <header class="top-header">
+
+        <div class="logo">
+            PRIVATE<span>VIDEO</span>
+        </div>
+
+        <button
+            onclick="goHome()"
+            class="logout-btn"
+        >
+            ← Back
+        </button>
+
+    </header>
+
+
+    <!-- WATCH PAGE -->
+
+    <main class="watch-main">
+
+        <!-- VIDEO PLAYER -->
+
+        <section class="watch-player-section">
+
+            <div class="watch-player">
+
+                <video
+                    id="mainVideo"
+                    playsinline
+                    controls
+                    preload="metadata"
+                >
+                    Your browser does not support video playback.
+                </video>
+
+            </div>
+
+
+            <!-- CUSTOM CONTROLS -->
+
+            <div class="custom-video-controls">
+
+                <button
+                    onclick="skipVideo(-10)"
+                >
+                    ⏪ 10s
+                </button>
+
+                <button
+                    onclick="togglePlay()"
+                    id="playPauseBtn"
+                >
+                    ▶ Play
+                </button>
+
+                <button
+                    onclick="skipVideo(10)"
+                >
+                    10s ⏩
+                </button>
+
+                <button
+                    onclick="fullscreenVideo()"
+                >
+                    ⛶ Fullscreen
+                </button>
+
+            </div>
+
+
+            <!-- VIDEO INFORMATION -->
+
+            <div class="watch-info">
+
+                <h1 id="watchTitle">
+                    Loading video...
+                </h1>
+
+                <div
+                    id="watchCategory"
+                    class="watch-category"
+                >
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- RELATED VIDEOS -->
+
+        <section class="related-section">
+
+            <div class="related-heading">
+
+                <small>
+                    VIDEO COLLECTION
+                </small>
+
+                <h2>
+                    Related Videos
+                </h2>
+
+            </div>
+
+
+            <div
+                id="relatedGrid"
+                class="video-grid"
+            >
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+
+    <footer>
+
+        <div class="footer-logo">
+            PRIVATE VIDEO
+        </div>
+
+        <p>
+            Japanese, English, Bangladesh and Indian
+            video collections in one private-style gallery.
+        </p>
+
+        <p class="copyright">
+            © 2026 Private Video Hub. All rights reserved.
+        </p>
+
+    </footer>
+
+
+    <script>
+
+        const videoPlayer =
+            document.getElementById("mainVideo");
+
+        let allVideos = [];
+
+        let currentVideo = null;
+
+
+        /* ================================
+           HOME
+        ================================= */
+
+        function goHome() {
+
+            window.location.href =
+                "index.html";
+
+        }
+
+
+        /* ================================
+           LOAD VIDEOS
+        ================================= */
+
+        async function loadVideos() {
+
+            try {
+
+                const response =
+                    await fetch("/api/videos");
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Could not load videos"
+                    );
+                }
+
+                const serverVideos =
+                    await response.json();
+
+
+                allVideos =
+                    serverVideos.map(video => {
+
+                        return {
+
+                            id:
+                                "uploaded-" +
+                                video.id,
+
+                            title:
+                                video.title,
+
+                            category:
+                                video.category,
+
+                            thumbnail:
+                                video.thumbnail,
+
+                            videoUrl:
+                                video.video,
+
+                            uploaded:
+                                true
+
+                        };
+
+                    });
+
+
+                openCurrentVideo();
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                document.getElementById(
+                    "watchTitle"
+                ).textContent =
+                    "Could not load video.";
+
+            }
+
+        }
+
+
+        /* ================================
+           OPEN CURRENT VIDEO
+        ================================= */
+
+        function openCurrentVideo() {
+
+            const params =
+                new URLSearchParams(
+                    window.location.search
+                );
+
+            const videoId =
+                params.get("id");
+
+
+            if (!videoId) {
+
+                document.getElementById(
+                    "watchTitle"
+                ).textContent =
+                    "Video not found.";
+
+                return;
+
+            }
+
+
+            currentVideo =
+                allVideos.find(
+                    video =>
+                        video.id === videoId
+                );
+
+
+            if (!currentVideo) {
+
+                document.getElementById(
+                    "watchTitle"
+                ).textContent =
+                    "Video not found.";
+
+                return;
+
+            }
+
+
+            videoPlayer.src =
+                currentVideo.videoUrl;
+
+
+            document.getElementById(
+                "watchTitle"
+            ).textContent =
+                currentVideo.title;
+
+
+            document.getElementById(
+                "watchCategory"
+            ).textContent =
+                currentVideo.category;
+
+
+            document.title =
+                currentVideo.title +
+                " - Private Video Hub";
+
+
+            renderRelatedVideos();
+
+        }
+
+
+        /* ================================
+           RELATED VIDEOS
+        ================================= */
+
+        function renderRelatedVideos() {
+
+            const grid =
+                document.getElementById(
+                    "relatedGrid"
+                );
+
+
+            grid.innerHTML = "";
+
+
+            let related =
+                allVideos.filter(
+                    video =>
+                        video.category ===
+                        currentVideo.category &&
+                        video.id !==
+                        currentVideo.id
+                );
+
+
+            /*
+                Same category-এর video আগে দেখাবে।
+                Maximum 12টা related video.
+            */
+
+            related =
+                related.slice(0, 12);
+
+
+            if (related.length === 0) {
+
+                grid.innerHTML = `
+                    <div class="no-related">
+                        No related videos available yet.
+                    </div>
+                `;
+
+                return;
+
+            }
+
+
+            related.forEach(video => {
+
+                const card =
+                    document.createElement("div");
+
+
+                card.className =
+                    "video-card";
+
+
+                card.innerHTML = `
+
+                    <div class="thumbnail-wrap">
+
+                        <img
+                            class="thumbnail"
+                            src="${escapeHTML(video.thumbnail)}"
+                            loading="lazy"
+                            alt="${escapeHTML(video.title)}"
+                        >
+
+                        <div class="play-button">
+                            ▶
+                        </div>
+
+                    </div>
+
+                    <div class="card-body">
+
+                        <div class="video-title">
+                            ${escapeHTML(video.title)}
+                        </div>
+
+                        <div class="video-category">
+                            ${escapeHTML(video.category)}
+                        </div>
+
+                    </div>
+
+                `;
+
+
+                card.onclick = function () {
+
+                    window.location.href =
+                        "watch.html?id=" +
+                        encodeURIComponent(
+                            video.id
+                        );
+
+                };
+
+
+                grid.appendChild(card);
+
+            });
+
+        }
+
+
+        /* ================================
+           PLAY / PAUSE
+        ================================= */
+
+        function togglePlay() {
+
+            if (videoPlayer.paused) {
+
+                videoPlayer.play();
+
+                document.getElementById(
+                    "playPauseBtn"
+                ).textContent =
+                    "⏸ Pause";
+
+            }
+            else {
+
+                videoPlayer.pause();
+
+                document.getElementById(
+                    "playPauseBtn"
+                ).textContent =
+                    "▶ Play";
+
+            }
+
+        }
+
+
+        /* ================================
+           10 SECOND SKIP
+        ================================= */
+
+        function skipVideo(seconds) {
+
+            if (!videoPlayer) return;
+
+            videoPlayer.currentTime =
+                Math.max(
+                    0,
+                    Math.min(
+                        videoPlayer.duration || Infinity,
+                        videoPlayer.currentTime +
+                        seconds
+                    )
+                );
+
+        }
+
+
+        /* ================================
+           FULLSCREEN
+        ================================= */
+
+        function fullscreenVideo() {
+
+            if (
+                videoPlayer.requestFullscreen
+            ) {
+
+                videoPlayer.requestFullscreen();
+
+            }
+            else if (
+                videoPlayer.webkitRequestFullscreen
+            ) {
+
+                videoPlayer.webkitRequestFullscreen();
+
+            }
+        }
+
+
+        /* ================================
+           PLAY BUTTON UPDATE
+        ================================= */
+
+        videoPlayer.addEventListener(
+            "play",
+            function () {
+
+                document.getElementById(
+                    "playPauseBtn"
+                ).textContent =
+                    "⏸ Pause";
+
+            }
+        );
+
+
+        videoPlayer.addEventListener(
+            "pause",
+            function () {
+
+                document.getElementById(
+                    "playPauseBtn"
+                ).textContent =
+                    "▶ Play";
+
+            }
+        );
+
+
+        /* ================================
+           HTML ESCAPE
+        ================================= */
+
+        function escapeHTML(value) {
+
+            return String(value)
+
+                .replaceAll(
+                    "&",
+                    "&amp;"
+                )
+
+                .replaceAll(
+                    "<",
+                    "&lt;"
+                )
+
+                .replaceAll(
+                    ">",
+                    "&gt;"
+                )
+
+                .replaceAll(
+                    '"',
+                    "&quot;"
+                )
+
+                .replaceAll(
+                    "'",
+                    "&#039;"
+                );
+
+        }
+
+
+        /* ================================
+           START
+        ================================= */
+
+        loadVideos();
+
+    </script>
+
+</body>
+
+</html>

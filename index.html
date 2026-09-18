@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>PRIVATE VIDEO</title>
+
+
+    <!-- =====================================
+         FAVICON
+    ====================================== -->
+
+    <link
+        rel="icon"
+        type="image/jpeg"
+        href="h_796much00111pl-1-245x353.jpg"
+    >
+
+
+    <!-- =====================================
+         WEBSITE CSS
+    ====================================== -->
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+
+<body>
+
+
+    <!-- =====================================
+         LOGIN PROTECTION
+    ====================================== -->
+
+    <script>
+
+        if (
+            sessionStorage.getItem("videoAuth")
+            !== "true"
+        ) {
+
+            window.location.href =
+                "login.html";
+
+        }
+
+    </script>
+
+
+
+    <!-- =====================================
+         AGE POPUP
+    ====================================== -->
+
+    <div
+        id="agePopup"
+        class="age-popup"
+    >
+
+        <div class="age-box">
+
+            <div class="age-icon">
+                🔞
+            </div>
+
+
+            <h2>
+                18+ ONLY
+            </h2>
+
+
+            <p>
+                This website contains
+                age-restricted content.
+            </p>
+
+
+            <p>
+                You must be 18 years or older
+                to continue.
+            </p>
+
+
+            <div class="age-buttons">
+
+                <button
+                    class="age-confirm"
+                    onclick="confirmAge()"
+                >
+                    I AM 18+
+                </button>
+
+
+                <button
+                    class="age-leave"
+                    onclick="leaveSite()"
+                >
+                    LEAVE
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- =====================================
+         HEADER
+    ====================================== -->
+
+    <header>
+
+        <div class="header-container">
+
+
+            <!-- LOGO -->
+
+            <a
+                href="index.html"
+                class="logo"
+            >
+
+                PRIVATE<span>VIDEO</span>
+
+            </a>
+
+
+            <!-- LOGOUT -->
+
+            <button
+                class="logout-btn"
+                onclick="logout()"
+            >
+
+                Logout
+
+            </button>
+
+
+        </div>
+
+    </header>
+
+
+
+    <!-- =====================================
+         HERO
+    ====================================== -->
+
+    <section class="hero">
+
+        <div class="container">
+
+            <div class="hero-content">
+
+
+                <div class="hero-label">
+                    PRIVATE MEMBERS AREA
+                </div>
+
+
+                <h1>
+
+                    PRIVATE
+                    <span>VIDEO</span>
+
+                </h1>
+
+
+                <p>
+                    Browse our private video
+                    collection.
+                </p>
+
+
+                <div class="hero-line"></div>
+
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================
+         CATEGORY NAVIGATION
+    ====================================== -->
+
+    <section class="category-section">
+
+        <div class="container">
+
+            <div class="categories">
+
+
+                <button
+                    class="category active"
+                    onclick="
+                        showCategory(
+                            'Japanese Mom',
+                            this
+                        )
+                    "
+                >
+
+                    Japanese Mom
+
+                </button>
+
+
+                <button
+                    class="category"
+                    onclick="
+                        showCategory(
+                            'Brazzur Mom',
+                            this
+                        )
+                    "
+                >
+
+                    Brazzur Mom
+
+                </button>
+
+
+                <button
+                    class="category"
+                    onclick="
+                        showCategory(
+                            'Bangladesh Video',
+                            this
+                        )
+                    "
+                >
+
+                    Bangladesh Video
+
+                </button>
+
+
+                <button
+                    class="category"
+                    onclick="
+                        showCategory(
+                            'Indian Video',
+                            this
+                        )
+                    "
+                >
+
+                    Indian Video
+
+                </button>
+
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+
+    <!-- =====================================
+         MAIN
+    ====================================== -->
+
+    <main>
+
+        <div class="container">
+
+
+            <!-- SECTION HEADING -->
+
+            <div class="section-heading">
+
+                <div>
+
+                    <small>
+                        VIDEO COLLECTION
+                    </small>
+
+
+                    <h2 id="categoryTitle">
+                        Japanese Mom
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================
+                 VIDEO GRID
+            ================================== -->
+
+            <div
+                id="videoGrid"
+                class="video-grid"
+            >
+
+                <div
+                    style="
+                        width:100%;
+                        padding:50px 20px;
+                        text-align:center;
+                        color:#777;
+                        grid-column:1/-1;
+                    "
+                >
+
+                    Loading videos...
+
+                </div>
+
+            </div>
+
+
+
+            <!-- =================================
+                 PAGINATION
+            ================================== -->
+
+            <div class="pagination">
+
+
+                <button
+                    id="prevBtn"
+                    onclick="previousPage()"
+                    disabled
+                >
+
+                    ← Previous
+
+                </button>
+
+
+                <div
+                    id="pageNumber"
+                    class="page-number"
+                >
+
+                    Page 1 / 1
+
+                </div>
+
+
+                <button
+                    id="nextBtn"
+                    onclick="nextPage()"
+                    disabled
+                >
+
+                    Next →
+
+                </button>
+
+
+            </div>
+
+
+
+            <!-- =================================
+                 WEBSITE STATS
+            ================================== -->
+
+            <section class="stats-section">
+
+
+                <!-- VIDEOS -->
+
+                <div class="stat-card">
+
+                    <div class="stat-number">
+
+                        <span id="videoCount">
+                            0
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat-label">
+                        VIDEOS
+                    </div>
+
+                </div>
+
+
+
+                <!-- VIEWS -->
+
+                <div class="stat-card">
+
+                    <div class="stat-number">
+
+                        <span id="totalViews">
+                            0
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat-label">
+                        TOTAL VIEWS
+                    </div>
+
+                </div>
+
+
+
+                <!-- LIKES -->
+
+                <div class="stat-card">
+
+                    <div class="stat-number">
+
+                        <span id="totalLikes">
+                            0
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat-label">
+                        TOTAL LIKES
+                    </div>
+
+                </div>
+
+
+
+                <!-- UPLOADED -->
+
+                <div class="stat-card">
+
+                    <div class="stat-number">
+
+                        <span id="activeUsers">
+                            0
+                        </span>
+
+                    </div>
+
+
+                    <div class="stat-label">
+                        UPLOADED
+                    </div>
+
+                </div>
+
+
+            </section>
+
+
+        </div>
+
+    </main>
+
+
+
+    <!-- =====================================
+         FOOTER
+    ====================================== -->
+
+    <footer>
+
+        <div class="container">
+
+
+            <div class="footer-logo">
+
+                PRIVATE<span>VIDEO</span>
+
+            </div>
+
+
+            <p>
+                Private video collection.
+            </p>
+
+
+            <p>
+                © 2026 PRIVATE VIDEO.
+                All rights reserved.
+            </p>
+
+
+        </div>
+
+    </footer>
+
+
+
+    <!-- =====================================
+         MAIN JAVASCRIPT
+    ====================================== -->
+
+    <script src="script.js"></script>
+
+
+
+    <!-- =====================================
+         WEBSITE STATS
+    ====================================== -->
+
+    <script>
+
+        async function updateWebsiteStats() {
+
+            try {
+
+
+                const response =
+                    await fetch(
+                        "/api/videos"
+                    );
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        "Unable to load videos"
+                    );
+
+                }
+
+
+                const data =
+                    await response.json();
+
+
+
+                /* =========================
+                   VIDEO COUNT
+                ========================== */
+
+                const videoCount =
+                    data.length;
+
+
+                const videoCountElement =
+                    document.getElementById(
+                        "videoCount"
+                    );
+
+
+                if (videoCountElement) {
+
+                    videoCountElement.textContent =
+                        formatWebsiteNumber(
+                            videoCount
+                        );
+
+                }
+
+
+
+                /* =========================
+                   UPLOADED COUNT
+                ========================== */
+
+                const uploadedElement =
+                    document.getElementById(
+                        "activeUsers"
+                    );
+
+
+                if (uploadedElement) {
+
+                    uploadedElement.textContent =
+                        formatWebsiteNumber(
+                            videoCount
+                        );
+
+                }
+
+
+
+                /* =========================
+                   TOTAL VIEWS
+                ========================== */
+
+                let totalViews = 0;
+
+
+                data.forEach(
+                    function (video) {
+
+                        totalViews +=
+                            Number(
+                                video.views
+                            ) || 0;
+
+                    }
+                );
+
+
+                const totalViewsElement =
+                    document.getElementById(
+                        "totalViews"
+                    );
+
+
+                if (totalViewsElement) {
+
+                    totalViewsElement.textContent =
+                        formatWebsiteNumber(
+                            totalViews
+                        );
+
+                }
+
+
+
+                /* =========================
+                   TOTAL LIKES
+                ========================== */
+
+                let totalLikes = 0;
+
+
+                data.forEach(
+                    function (video) {
+
+                        totalLikes +=
+                            Number(
+                                video.likes
+                            ) || 0;
+
+                    }
+                );
+
+
+                const totalLikesElement =
+                    document.getElementById(
+                        "totalLikes"
+                    );
+
+
+                if (totalLikesElement) {
+
+                    totalLikesElement.textContent =
+                        formatWebsiteNumber(
+                            totalLikes
+                        );
+
+                }
+
+
+            }
+            catch (error) {
+
+                console.error(
+                    "Website stats error:",
+                    error
+                );
+
+            }
+
+        }
+
+
+
+        /* =====================================
+           NUMBER FORMAT
+        ====================================== */
+
+        function formatWebsiteNumber(
+            number
+        ) {
+
+
+            number =
+                Number(number) || 0;
+
+
+            if (
+                number >= 1000000
+            ) {
+
+                return (
+
+                    (number / 1000000)
+                        .toFixed(1)
+                        .replace(
+                            ".0",
+                            ""
+                        )
+
+                    + "M"
+
+                );
+
+            }
+
+
+            if (
+                number >= 1000
+            ) {
+
+                return (
+
+                    (number / 1000)
+                        .toFixed(1)
+                        .replace(
+                            ".0",
+                            ""
+                        )
+
+                    + "K"
+
+                );
+
+            }
+
+
+            return number.toString();
+
+        }
+
+
+
+        /* =====================================
+           PAGE LOAD
+        ====================================== */
+
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+
+
+                const popup =
+                    document.getElementById(
+                        "agePopup"
+                    );
+
+
+                if (
+                    sessionStorage.getItem(
+                        "ageConfirmed"
+                    ) === "true"
+                ) {
+
+
+                    if (popup) {
+
+                        popup.style.display =
+                            "none";
+
+                    }
+
+                }
+
+
+                updateWebsiteStats();
+
+            }
+        );
+
+    </script>
+
+
+</body>
+
+</html>
