@@ -1,39 +1,42 @@
 /* =========================================
-ADMIN PANEL JAVASCRIPT
+   ADMIN PANEL JAVASCRIPT
+========================================= */
+
+
+/* =========================================
+   ADMIN TOKEN
 ========================================= */
 
 function getAdminToken() {
-return sessionStorage.getItem("adminToken");
+    return sessionStorage.getItem("adminToken");
 }
 
+
 /* =========================================
-ADMIN LOGIN
+   ADMIN LOGIN
 ========================================= */
 
 async function adminLogin() {
 
+    const username =
+        document.getElementById("adminUsername").value.trim();
 
-const username =
-    document.getElementById("adminUsername").value.trim();
+    const password =
+        document.getElementById("adminPassword").value;
 
-const password =
-    document.getElementById("adminPassword").value;
+    const message =
+        document.getElementById("loginMessage");
 
-const message =
-    document.getElementById("loginMessage");
+    if (!username || !password) {
+        message.textContent = "Username and password দিন।";
+        return;
+    }
 
-if (!username || !password) {
-    message.textContent = "Username and password দিন।";
-    return;
-}
+    message.textContent = "Logging in...";
 
-message.textContent = "Logging in...";
+    try {
 
-try {
-
-    const response = await fetch(
-        "/api/admin-login",
-        {
+        const response = await fetch("/api/admin-login", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -42,56 +45,51 @@ try {
                 username: username,
                 password: password
             })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+
+            sessionStorage.setItem(
+                "adminToken",
+                result.token
+            );
+
+            document.getElementById(
+                "adminLogin"
+            ).style.display = "none";
+
+            document.getElementById(
+                "uploadPanel"
+            ).style.display = "block";
+
+            message.textContent = "";
+
+            loadAdminVideos();
+
+        } else {
+
+            message.textContent =
+                result.message ||
+                "Invalid username or password.";
         }
-    );
 
-    const result = await response.json();
+    } catch (error) {
 
-    if (result.success) {
-
-        sessionStorage.setItem(
-            "adminToken",
-            result.token
-        );
-
-        document.getElementById(
-            "adminLogin"
-        ).style.display = "none";
-
-        document.getElementById(
-            "uploadPanel"
-        ).style.display = "block";
-
-        message.textContent = "";
-
-        loadAdminVideos();
-
-    } else {
+        console.error("Login error:", error);
 
         message.textContent =
-            result.message ||
-            "Invalid username or password.";
+            "Server connection failed.";
     }
-
-} catch (error) {
-
-    console.error("Login error:", error);
-
-    message.textContent =
-        "Server connection failed.";
 }
 
-
-}
 
 /* =========================================
-ENTER KEY LOGIN
+   ENTER KEY LOGIN
 ========================================= */
 
-document.addEventListener(
-"keydown",
-function (event) {
-
+document.addEventListener("keydown", function (event) {
 
     if (
         event.key === "Enter" &&
@@ -101,700 +99,612 @@ function (event) {
         adminLogin();
     }
 
-}
+});
 
-
-);
 
 /* =========================================
-LOGOUT
+   LOGOUT
 ========================================= */
 
 async function adminLogout() {
 
+    const confirmed = confirm(
+        "আপনি কি Admin Panel থেকে logout করতে চান?"
+    );
 
-const confirmed = confirm(
-    "আপনি কি Admin Panel থেকে logout করতে চান?"
-);
+    if (!confirmed) {
+        return;
+    }
 
-if (!confirmed) {
-    return;
-}
+    const token = getAdminToken();
 
-const token = getAdminToken();
+    try {
 
-try {
+        if (token) {
 
-    if (token) {
-
-        await fetch(
-            "/api/admin-logout",
-            {
+            await fetch("/api/admin-logout", {
                 method: "POST",
                 headers: {
                     "x-admin-token": token
                 }
-            }
-        );
+            });
+
+        }
+
+    } catch (error) {
+
+        console.error("Logout error:", error);
+
     }
 
-} catch (error) {
+    sessionStorage.removeItem("adminToken");
 
-    console.error("Logout error:", error);
+    document.getElementById(
+        "uploadPanel"
+    ).style.display = "none";
+
+    document.getElementById(
+        "adminLogin"
+    ).style.display = "flex";
+
+    document.getElementById(
+        "adminUsername"
+    ).value = "";
+
+    document.getElementById(
+        "adminPassword"
+    ).value = "";
+
+    document.getElementById(
+        "loginMessage"
+    ).textContent = "";
+
+    updateSelectedCount();
 }
 
-sessionStorage.removeItem("adminToken");
-
-document.getElementById(
-    "uploadPanel"
-).style.display = "none";
-
-document.getElementById(
-    "adminLogin"
-).style.display = "flex";
-
-document.getElementById(
-    "adminUsername"
-).value = "";
-
-document.getElementById(
-    "adminPassword"
-).value = "";
-
-document.getElementById(
-    "loginMessage"
-).textContent = "";
-
-updateSelectedCount();
-
-
-}
 
 /* =========================================
-RESET PROGRESS
+   RESET PROGRESS
 ========================================= */
 
 function resetUploadProgress() {
 
+    const bar =
+        document.getElementById("progressBar1");
 
-const bar =
-    document.getElementById("progressBar1");
+    const text =
+        document.getElementById("progressText1");
 
-const text =
-    document.getElementById("progressText1");
+    const status =
+        document.getElementById("status1");
 
-const status =
-    document.getElementById("status1");
+    if (bar) {
+        bar.style.width = "0%";
+    }
 
-if (bar) {
-    bar.style.width = "0%";
+    if (text) {
+        text.textContent = "0%";
+    }
+
+    if (status) {
+        status.textContent = "Waiting...";
+    }
 }
 
-if (text) {
-    text.textContent = "0%";
-}
-
-if (status) {
-    status.textContent = "Waiting...";
-}
-
-
-}
 
 /* =========================================
-SET PROGRESS
+   SET PROGRESS
 ========================================= */
 
 function setUploadProgress(percent, statusText) {
 
+    const bar =
+        document.getElementById("progressBar1");
 
-const bar =
-    document.getElementById("progressBar1");
+    const text =
+        document.getElementById("progressText1");
 
-const text =
-    document.getElementById("progressText1");
+    const status =
+        document.getElementById("status1");
 
-const status =
-    document.getElementById("status1");
+    if (bar) {
+        bar.style.width = percent + "%";
+    }
 
-if (bar) {
-    bar.style.width = percent + "%";
+    if (text) {
+        text.textContent = percent + "%";
+    }
+
+    if (status && statusText) {
+        status.textContent = statusText;
+    }
 }
 
-if (text) {
-    text.textContent = percent + "%";
-}
-
-if (status && statusText) {
-    status.textContent = statusText;
-}
-
-
-}
 
 /* =========================================
-UPLOAD VIDEO
+   UPLOAD VIDEO
 ========================================= */
 
 function uploadVideo(
-title,
-category,
-video,
-thumbnail,
-token
+    title,
+    category,
+    video,
+    thumbnail,
+    token
 ) {
 
+    return new Promise(function (resolve) {
 
-return new Promise(function (resolve) {
+        const formData = new FormData();
 
-    const formData = new FormData();
+        formData.append("title", title);
+        formData.append("category", category);
+        formData.append("video1", video);
+        formData.append("thumbnail1", thumbnail);
 
-    /*
-     * IMPORTANT:
-     * server.js expects these exact field names
-     */
+        const xhr = new XMLHttpRequest();
 
-    formData.append(
-        "title",
-        title
-    );
+        xhr.open("POST", "/api/upload", true);
 
-    formData.append(
-        "category",
-        category
-    );
-
-    formData.append(
-        "video1",
-        video
-    );
-
-    formData.append(
-        "thumbnail1",
-        thumbnail
-    );
+        xhr.setRequestHeader(
+            "x-admin-token",
+            token
+        );
 
 
-    const xhr =
-        new XMLHttpRequest();
+        xhr.upload.addEventListener(
+            "progress",
+            function (event) {
 
+                if (event.lengthComputable) {
 
-    xhr.open(
-        "POST",
-        "/api/upload",
-        true
-    );
+                    const percent =
+                        Math.round(
+                            (event.loaded / event.total) * 100
+                        );
 
-
-    xhr.setRequestHeader(
-        "x-admin-token",
-        token
-    );
-
-
-    /* =========================
-       UPLOAD PROGRESS
-    ========================= */
-
-    xhr.upload.addEventListener(
-        "progress",
-        function (event) {
-
-            if (event.lengthComputable) {
-
-                const percent =
-                    Math.round(
-                        (
-                            event.loaded /
-                            event.total
-                        ) * 100
+                    setUploadProgress(
+                        percent,
+                        "Uploading to server..."
                     );
-
-                setUploadProgress(
-                    percent,
-                    "Uploading to server..."
-                );
+                }
             }
-        }
-    );
+        );
 
 
-    /* =========================
-       SERVER RESPONSE
-    ========================= */
+        xhr.addEventListener(
+            "load",
+            function () {
 
-    xhr.addEventListener(
-        "load",
-        function () {
+                let result;
 
-            let result;
+                try {
 
-            try {
+                    result =
+                        JSON.parse(
+                            xhr.responseText
+                        );
 
-                result =
-                    JSON.parse(
+                } catch (error) {
+
+                    console.error(
+                        "Invalid server response:",
                         xhr.responseText
                     );
 
-            } catch (error) {
-
-                console.error(
-                    "Invalid server response:",
-                    xhr.responseText
-                );
-
-                result = {
-                    success: false,
-                    message:
-                        "Invalid server response."
-                };
-            }
+                    result = {
+                        success: false,
+                        message:
+                            "Invalid server response."
+                    };
+                }
 
 
-            if (
-                xhr.status === 401 ||
-                xhr.status === 403
-            ) {
+                if (
+                    xhr.status === 401 ||
+                    xhr.status === 403
+                ) {
+
+                    setUploadProgress(
+                        0,
+                        "❌ Admin session expired."
+                    );
+
+                    resolve({
+                        success: false,
+                        sessionExpired: true,
+                        message:
+                            "Admin session expired."
+                    });
+
+                    return;
+                }
+
+
+                if (
+                    xhr.status >= 200 &&
+                    xhr.status < 300 &&
+                    result.success
+                ) {
+
+                    setUploadProgress(
+                        100,
+                        "✅ Uploaded successfully"
+                    );
+
+                    resolve({
+                        success: true,
+                        video: result.video
+                    });
+
+                    return;
+                }
+
 
                 setUploadProgress(
                     0,
-                    "❌ Admin session expired."
-                );
-
-                resolve({
-                    success: false,
-                    sessionExpired: true,
-                    message:
-                        "Admin session expired."
-                });
-
-                return;
-            }
-
-
-            if (
-                xhr.status >= 200 &&
-                xhr.status < 300 &&
-                result.success
-            ) {
-
-                setUploadProgress(
-                    100,
-                    "✅ Uploaded successfully"
-                );
-
-                resolve({
-                    success: true,
-                    video: result.video
-                });
-
-                return;
-            }
-
-
-            setUploadProgress(
-                0,
-                "❌ " +
-                (
-                    result.message ||
-                    "Upload failed."
-                )
-            );
-
-            resolve({
-                success: false,
-                message:
-                    result.message ||
-                    "Upload failed."
-            });
-        }
-    );
-
-
-    /* =========================
-       NETWORK ERROR
-    ========================= */
-
-    xhr.addEventListener(
-        "error",
-        function () {
-
-            setUploadProgress(
-                0,
-                "❌ Network error"
-            );
-
-            resolve({
-                success: false,
-                message:
-                    "Network error."
-            });
-        }
-    );
-
-
-    /* =========================
-       ABORT
-    ========================= */
-
-    xhr.addEventListener(
-        "abort",
-        function () {
-
-            setUploadProgress(
-                0,
-                "❌ Upload cancelled"
-            );
-
-            resolve({
-                success: false,
-                message:
-                    "Upload cancelled."
-            });
-        }
-    );
-
-
-    setUploadProgress(
-        0,
-        "Starting upload..."
-    );
-
-
-    xhr.send(formData);
-});
-
-
-}
-
-/* =========================================
-SINGLE UPLOAD FORM
-========================================= */
-
-document.addEventListener(
-"DOMContentLoaded",
-function () {
-
-
-    const uploadForm =
-        document.getElementById("uploadForm");
-
-    if (!uploadForm) {
-        return;
-    }
-
-
-    uploadForm.addEventListener(
-        "submit",
-        async function (event) {
-
-            event.preventDefault();
-
-
-            const message =
-                document.getElementById(
-                    "uploadMessage"
-                );
-
-            const token =
-                getAdminToken();
-
-
-            /* =========================
-               CHECK LOGIN
-            ========================= */
-
-            if (!token) {
-
-                message.textContent =
-                    "Admin login required.";
-
-                return;
-            }
-
-
-            /* =========================
-               GET DATA
-            ========================= */
-
-            const title =
-                document.getElementById(
-                    "title1"
-                ).value.trim();
-
-            const category =
-                document.getElementById(
-                    "category1"
-                ).value;
-
-            const videoInput =
-                document.getElementById(
-                    "video1"
-                );
-
-            const thumbnailInput =
-                document.getElementById(
-                    "thumbnail1"
-                );
-
-            const video =
-                videoInput.files[0];
-
-            const thumbnail =
-                thumbnailInput.files[0];
-
-
-            /* =========================
-               VALIDATION
-            ========================= */
-
-            if (!title) {
-
-                message.textContent =
-                    "Video title দিন.";
-
-                return;
-            }
-
-            if (!category) {
-
-                message.textContent =
-                    "Category select করুন.";
-
-                return;
-            }
-
-            if (!video) {
-
-                message.textContent =
-                    "Video file select করুন.";
-
-                return;
-            }
-
-            if (!thumbnail) {
-
-                message.textContent =
-                    "Thumbnail select করুন.";
-
-                return;
-            }
-
-            if (
-                !video.type.startsWith("video/")
-            ) {
-
-                message.textContent =
-                    "Selected fileটি video হতে হবে.";
-
-                return;
-            }
-
-            if (
-                !thumbnail.type.startsWith("image/")
-            ) {
-
-                message.textContent =
-                    "Thumbnail image হতে হবে.";
-
-                return;
-            }
-
-
-            /* =========================
-               BUTTON
-            ========================= */
-
-            const uploadButton =
-                uploadForm.querySelector(
-                    ".upload-btn"
-                );
-
-            if (uploadButton) {
-
-                uploadButton.disabled = true;
-
-                uploadButton.textContent =
-                    "⏳ Uploading...";
-            }
-
-
-            message.textContent =
-                "Video uploading...";
-
-
-            resetUploadProgress();
-
-
-            /* =========================
-               UPLOAD
-            ========================= */
-
-            const result =
-                await uploadVideo(
-                    title,
-                    category,
-                    video,
-                    thumbnail,
-                    token
-                );
-
-
-            /* =========================
-               SESSION EXPIRED
-            ========================= */
-
-            if (result.sessionExpired) {
-
-                sessionStorage.removeItem(
-                    "adminToken"
-                );
-
-                document.getElementById(
-                    "uploadPanel"
-                ).style.display = "none";
-
-                document.getElementById(
-                    "adminLogin"
-                ).style.display = "flex";
-
-                message.textContent =
-                    "Admin session expired. Please login again.";
-
-                return;
-            }
-
-
-            /* =========================
-               SUCCESS
-            ========================= */
-
-            if (result.success) {
-
-                message.textContent =
-                    "✅ Video successfully uploaded to VCDN!";
-
-                await loadAdminVideos();
-
-                uploadForm.reset();
-
-            } else {
-
-                message.textContent =
                     "❌ " +
                     (
                         result.message ||
                         "Upload failed."
-                    );
+                    )
+                );
+
+                resolve({
+                    success: false,
+                    message:
+                        result.message ||
+                        "Upload failed."
+                });
+
             }
+        );
 
 
-            /* =========================
-               BUTTON RESTORE
-            ========================= */
+        xhr.addEventListener(
+            "error",
+            function () {
 
-            if (uploadButton) {
+                setUploadProgress(
+                    0,
+                    "❌ Network error"
+                );
 
-                uploadButton.disabled = false;
+                resolve({
+                    success: false,
+                    message: "Network error."
+                });
 
-                uploadButton.textContent =
-                    "🚀 Upload Video";
             }
+        );
 
-        }
-    );
+
+        xhr.addEventListener(
+            "abort",
+            function () {
+
+                setUploadProgress(
+                    0,
+                    "❌ Upload cancelled"
+                );
+
+                resolve({
+                    success: false,
+                    message: "Upload cancelled."
+                });
+
+            }
+        );
+
+
+        setUploadProgress(
+            0,
+            "Starting upload..."
+        );
+
+        xhr.send(formData);
+
+    });
 }
 
 
+/* =========================================
+   SINGLE UPLOAD FORM
+========================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        const uploadForm =
+            document.getElementById("uploadForm");
+
+        if (!uploadForm) {
+            return;
+        }
+
+
+        uploadForm.addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+                const message =
+                    document.getElementById(
+                        "uploadMessage"
+                    );
+
+                const token =
+                    getAdminToken();
+
+
+                if (!token) {
+
+                    message.textContent =
+                        "Admin login required.";
+
+                    return;
+                }
+
+
+                const title =
+                    document.getElementById(
+                        "title1"
+                    ).value.trim();
+
+                const category =
+                    document.getElementById(
+                        "category1"
+                    ).value;
+
+                const videoInput =
+                    document.getElementById(
+                        "video1"
+                    );
+
+                const thumbnailInput =
+                    document.getElementById(
+                        "thumbnail1"
+                    );
+
+                const video =
+                    videoInput.files[0];
+
+                const thumbnail =
+                    thumbnailInput.files[0];
+
+
+                if (!title) {
+
+                    message.textContent =
+                        "Video title দিন.";
+
+                    return;
+                }
+
+
+                if (!category) {
+
+                    message.textContent =
+                        "Category select করুন.";
+
+                    return;
+                }
+
+
+                if (!video) {
+
+                    message.textContent =
+                        "Video file select করুন.";
+
+                    return;
+                }
+
+
+                if (!thumbnail) {
+
+                    message.textContent =
+                        "Thumbnail select করুন.";
+
+                    return;
+                }
+
+
+                if (!video.type.startsWith("video/")) {
+
+                    message.textContent =
+                        "Selected fileটি video হতে হবে.";
+
+                    return;
+                }
+
+
+                if (!thumbnail.type.startsWith("image/")) {
+
+                    message.textContent =
+                        "Thumbnail image হতে হবে.";
+
+                    return;
+                }
+
+
+                const uploadButton =
+                    uploadForm.querySelector(
+                        ".upload-btn"
+                    );
+
+
+                if (uploadButton) {
+
+                    uploadButton.disabled = true;
+
+                    uploadButton.textContent =
+                        "⏳ Uploading...";
+                }
+
+
+                message.textContent =
+                    "Video uploading...";
+
+                resetUploadProgress();
+
+
+                const result =
+                    await uploadVideo(
+                        title,
+                        category,
+                        video,
+                        thumbnail,
+                        token
+                    );
+
+
+                if (result.sessionExpired) {
+
+                    sessionStorage.removeItem(
+                        "adminToken"
+                    );
+
+                    document.getElementById(
+                        "uploadPanel"
+                    ).style.display = "none";
+
+                    document.getElementById(
+                        "adminLogin"
+                    ).style.display = "flex";
+
+                    message.textContent =
+                        "Admin session expired. Please login again.";
+
+                    return;
+                }
+
+
+                if (result.success) {
+
+                    message.textContent =
+                        "✅ Video successfully uploaded to VCDN!";
+
+                    await loadAdminVideos();
+
+                    uploadForm.reset();
+
+                } else {
+
+                    message.textContent =
+                        "❌ " +
+                        (
+                            result.message ||
+                            "Upload failed."
+                        );
+                }
+
+
+                if (uploadButton) {
+
+                    uploadButton.disabled = false;
+
+                    uploadButton.textContent =
+                        "🚀 Upload Video";
+                }
+
+            }
+        );
+
+    }
 );
 
+
 /* =========================================
-LOAD ADMIN VIDEOS
+   LOAD ADMIN VIDEOS
 ========================================= */
 
 async function loadAdminVideos() {
 
-
-const list =
-    document.getElementById(
-        "adminVideoList"
-    );
-
-if (!list) {
-    return;
-}
-
-list.innerHTML = `
-    <div class="loading-box">
-        <div class="loader"></div>
-        <p>Loading uploaded videos...</p>
-    </div>
-`;
-
-
-try {
-
-    const response =
-        await fetch("/api/videos");
-
-
-    if (!response.ok) {
-
-        throw new Error(
-            "Failed to load videos"
-        );
-    }
-
-
-    const videos =
-        await response.json();
-
-
-    const selectAll =
+    const list =
         document.getElementById(
-            "selectAllVideos"
+            "adminVideoList"
         );
 
-    if (selectAll) {
-        selectAll.checked = false;
-    }
-
-
-    list.innerHTML = "";
-
-
-    updateTotalUploaded(
-        Array.isArray(videos)
-            ? videos.length
-            : 0
-    );
-
-
-    updateSelectedCount();
-
-
-    if (
-        !Array.isArray(videos) ||
-        videos.length === 0
-    ) {
-
-        list.innerHTML = `
-            <div class="loading-box">
-                <p>📂 No uploaded videos found.</p>
-            </div>
-        `;
-
+    if (!list) {
         return;
     }
 
 
-    videos.forEach(
-        function (video) {
+    list.innerHTML = `
+        <div class="loading-box">
+            <div class="loader"></div>
+            <p>Loading uploaded videos...</p>
+        </div>
+    `;
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/videos",
+                {
+                    cache: "no-store"
+                }
+            );
+
+
+        if (!response.ok) {
+            throw new Error(
+                "Failed to load videos"
+            );
+        }
+
+
+        const videos =
+            await response.json();
+
+
+        const selectAll =
+            document.getElementById(
+                "selectAllVideos"
+            );
+
+
+        if (selectAll) {
+            selectAll.checked = false;
+        }
+
+
+        list.innerHTML = "";
+
+
+        updateTotalUploaded(
+            Array.isArray(videos)
+                ? videos.length
+                : 0
+        );
+
+
+        updateSelectedCount();
+
+
+        if (
+            !Array.isArray(videos) ||
+            videos.length === 0
+        ) {
+
+            list.innerHTML = `
+                <div class="loading-box">
+                    <p>📂 No uploaded videos found.</p>
+                </div>
+            `;
+
+            return;
+        }
+
+
+        videos.forEach(function (video) {
 
             const item =
-                document.createElement(
-                    "div"
-                );
+                document.createElement("div");
 
             item.className =
                 "admin-video-item";
@@ -805,8 +715,19 @@ try {
                     video.id || ""
                 );
 
+            const rawVideoId =
+                String(
+                    video.id || ""
+                );
+
             const title =
                 escapeHTML(
+                    video.title ||
+                    "Untitled Video"
+                );
+
+            const rawTitle =
+                String(
                     video.title ||
                     "Untitled Video"
                 );
@@ -837,11 +758,61 @@ try {
 
                 </div>
 
-                <img
-                    src="${thumbnail}"
-                    alt="Video Thumbnail"
-                    loading="lazy"
-                >
+
+                <div class="admin-thumbnail-box">
+
+                    ${
+                        thumbnail
+                        ?
+                        `
+                        <img
+                            src="${thumbnail}"
+                            alt="Video Thumbnail"
+                            loading="lazy"
+                            class="admin-video-thumbnail"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                        >
+
+                        <div
+                            class="thumbnail-fallback"
+                            style="
+                                display:none;
+                                width:120px;
+                                height:75px;
+                                align-items:center;
+                                justify-content:center;
+                                background:#111;
+                                color:#fff;
+                                font-size:30px;
+                                border-radius:8px;
+                            "
+                        >
+                            🎬
+                        </div>
+                        `
+                        :
+                        `
+                        <div
+                            class="thumbnail-fallback"
+                            style="
+                                display:flex;
+                                width:120px;
+                                height:75px;
+                                align-items:center;
+                                justify-content:center;
+                                background:#111;
+                                color:#fff;
+                                font-size:30px;
+                                border-radius:8px;
+                            "
+                        >
+                            🎬
+                        </div>
+                        `
+                    }
+
+                </div>
+
 
                 <div class="admin-video-info">
 
@@ -854,436 +825,714 @@ try {
                     </p>
 
                 </div>
+
+
+                <div
+                    class="admin-video-actions"
+                    style="
+                        display:flex;
+                        align-items:center;
+                        gap:10px;
+                        margin-left:auto;
+                    "
+                >
+
+                    <button
+                        type="button"
+                        class="update-thumbnail-btn"
+                        onclick='openThumbnailUpdater(
+                            ${JSON.stringify(rawVideoId)},
+                            ${JSON.stringify(rawTitle)}
+                        )'
+                        style="
+                            display:inline-flex;
+                            align-items:center;
+                            justify-content:center;
+                            visibility:visible;
+                            opacity:1;
+                            cursor:pointer;
+                            padding:10px 15px;
+                            border:none;
+                            border-radius:8px;
+                            background:#2563eb;
+                            color:#fff;
+                            font-weight:600;
+                            font-size:14px;
+                            min-width:170px;
+                        "
+                    >
+                        🖼️ Update Thumbnail
+                    </button>
+
+                </div>
+
             `;
 
 
             list.appendChild(item);
-        }
-    );
 
+        });
 
-    updateSelectedCount();
 
-
-} catch (error) {
-
-    console.error(
-        "Load videos error:",
-        error
-    );
-
-    list.innerHTML = `
-        <div class="loading-box">
-            <p>❌ Could not load uploaded videos.</p>
-            <p>Please check if the server is running.</p>
-        </div>
-    `;
-}
-
-
-}
-
-/* =========================================
-TOTAL UPLOADED
-========================================= */
-
-function updateTotalUploaded(count) {
-
-
-const totalUploaded =
-    document.getElementById(
-        "totalUploaded"
-    );
-
-if (totalUploaded) {
-
-    totalUploaded.textContent =
-        count;
-}
-
-
-}
-
-/* =========================================
-SELECT ALL
-========================================= */
-
-function toggleSelectAll() {
-
-
-const selectAll =
-    document.getElementById(
-        "selectAllVideos"
-    );
-
-if (!selectAll) {
-    return;
-}
-
-
-const checked =
-    selectAll.checked;
-
-
-const checkboxes =
-    document.querySelectorAll(
-        ".video-checkbox"
-    );
-
-
-checkboxes.forEach(
-    function (checkbox) {
-
-        checkbox.checked =
-            checked;
-    }
-);
-
-
-updateSelectedCount();
-
-
-}
-
-/* =========================================
-SELECTED COUNT
-========================================= */
-
-function updateSelectedCount() {
-
-
-const selected =
-    document.querySelectorAll(
-        ".video-checkbox:checked"
-    );
-
-
-const count =
-    selected.length;
-
-
-const text =
-    document.getElementById(
-        "selectedCount"
-    );
-
-
-if (text) {
-
-    text.textContent =
-        count +
-        (
-            count === 1
-                ? " video selected"
-                : " videos selected"
-        );
-}
-
-
-const dashboardSelected =
-    document.getElementById(
-        "dashboardSelected"
-    );
-
-
-if (dashboardSelected) {
-
-    dashboardSelected.textContent =
-        count;
-}
-
-
-const allCheckboxes =
-    document.querySelectorAll(
-        ".video-checkbox"
-    );
-
-
-const selectAll =
-    document.getElementById(
-        "selectAllVideos"
-    );
-
-
-if (
-    selectAll &&
-    allCheckboxes.length > 0
-) {
-
-    selectAll.checked =
-        selected.length ===
-        allCheckboxes.length;
-
-} else if (selectAll) {
-
-    selectAll.checked = false;
-}
-
-
-}
-
-/* =========================================
-DELETE SELECTED VIDEOS
-========================================= */
-
-async function deleteSelectedVideos() {
-
-
-const selected =
-    document.querySelectorAll(
-        ".video-checkbox:checked"
-    );
-
-
-if (selected.length === 0) {
-
-    alert(
-        "আগে যে video delete করতে চান সেটি select করুন।"
-    );
-
-    return;
-}
-
-
-const count =
-    selected.length;
-
-
-const confirmed =
-    confirm(
-        count +
-        " টি video permanently delete করতে চান?\n\n" +
-        "এই action undo করা যাবে না।"
-    );
-
-
-if (!confirmed) {
-    return;
-}
-
-
-const token =
-    getAdminToken();
-
-
-if (!token) {
-
-    alert(
-        "Admin session নেই। আবার login করুন।"
-    );
-
-    return;
-}
-
-
-const deleteButton =
-    document.querySelector(
-        ".delete-selected-btn"
-    );
-
-
-if (deleteButton) {
-
-    deleteButton.disabled = true;
-
-    deleteButton.textContent =
-        "⏳ Deleting...";
-}
-
-
-let successCount = 0;
-
-let failedCount = 0;
-
-
-for (const checkbox of selected) {
-
-    const videoId =
-        checkbox.value;
-
-
-    try {
-
-        const response =
-            await fetch(
-                "/api/videos/" +
-                encodeURIComponent(videoId),
-                {
-                    method: "DELETE",
-                    headers: {
-                        "x-admin-token":
-                            token
-                    }
-                }
-            );
-
-
-        let result;
-
-
-        try {
-
-            result =
-                await response.json();
-
-        } catch {
-
-            result = {
-                success: false
-            };
-        }
-
-
-        if (
-            response.status === 401 ||
-            response.status === 403
-        ) {
-
-            sessionStorage.removeItem(
-                "adminToken"
-            );
-
-            alert(
-                "Admin session expired. আবার login করুন।"
-            );
-
-
-            document.getElementById(
-                "uploadPanel"
-            ).style.display = "none";
-
-
-            document.getElementById(
-                "adminLogin"
-            ).style.display = "flex";
-
-
-            return;
-        }
-
-
-        if (result.success) {
-
-            successCount++;
-
-        } else {
-
-            failedCount++;
-        }
+        updateSelectedCount();
 
 
     } catch (error) {
 
         console.error(
-            "Delete error:",
+            "Load videos error:",
             error
         );
 
-        failedCount++;
+        list.innerHTML = `
+            <div class="loading-box">
+                <p>❌ Could not load uploaded videos.</p>
+                <p>Please check if the server is running.</p>
+            </div>
+        `;
     }
 }
 
 
-if (failedCount === 0) {
+/* =========================================
+   UPDATE THUMBNAIL
+========================================= */
 
-    alert(
-        "✅ " +
-        successCount +
-        " টি video successfully deleted."
-    );
+async function openThumbnailUpdater(
+    videoId,
+    videoTitle
+) {
 
-} else {
+    const token =
+        getAdminToken();
 
-    alert(
-        "Deleted: " +
-        successCount +
-        "\nFailed: " +
-        failedCount
-    );
+
+    if (!token) {
+
+        alert(
+            "Admin session নেই। আবার login করুন।"
+        );
+
+        return;
+    }
+
+
+    const input =
+        document.createElement("input");
+
+
+    input.type = "file";
+
+    input.accept =
+        "image/jpeg,image/png,image/webp,image/gif";
+
+
+    input.onchange =
+        async function () {
+
+            const file =
+                input.files[0];
+
+
+            if (!file) {
+                return;
+            }
+
+
+            if (
+                !file.type.startsWith("image/")
+            ) {
+
+                alert(
+                    "শুধু image file select করুন।"
+                );
+
+                return;
+            }
+
+
+            if (
+                file.size >
+                10 * 1024 * 1024
+            ) {
+
+                alert(
+                    "Thumbnail সর্বোচ্চ 10MB হতে পারবে।"
+                );
+
+                return;
+            }
+
+
+            const confirmed =
+                confirm(
+                    "এই video-এর thumbnail পরিবর্তন করবেন?\n\n" +
+                    videoTitle
+                );
+
+
+            if (!confirmed) {
+                return;
+            }
+
+
+            const formData =
+                new FormData();
+
+
+            formData.append(
+                "thumbnail",
+                file
+            );
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/api/videos/" +
+                        encodeURIComponent(
+                            videoId
+                        ) +
+                        "/thumbnail",
+                        {
+                            method: "PUT",
+                            headers: {
+                                "x-admin-token":
+                                    token
+                            },
+                            body:
+                                formData
+                        }
+                    );
+
+
+                let result;
+
+
+                try {
+
+                    result =
+                        await response.json();
+
+                } catch {
+
+                    result = {
+                        success: false,
+                        message:
+                            "Invalid server response."
+                    };
+                }
+
+
+                if (
+                    response.status === 401 ||
+                    response.status === 403
+                ) {
+
+                    sessionStorage.removeItem(
+                        "adminToken"
+                    );
+
+
+                    const panel =
+                        document.getElementById(
+                            "uploadPanel"
+                        );
+
+                    const login =
+                        document.getElementById(
+                            "adminLogin"
+                        );
+
+
+                    if (panel) {
+                        panel.style.display = "none";
+                    }
+
+
+                    if (login) {
+                        login.style.display = "flex";
+                    }
+
+
+                    alert(
+                        "Admin session expired. আবার login করুন।"
+                    );
+
+                    return;
+                }
+
+
+                if (
+                    response.ok &&
+                    result.success
+                ) {
+
+                    alert(
+                        "✅ Thumbnail successfully updated!"
+                    );
+
+
+                    await loadAdminVideos();
+
+                } else {
+
+                    alert(
+                        "❌ " +
+                        (
+                            result.message ||
+                            "Thumbnail update failed."
+                        )
+                    );
+                }
+
+
+            } catch (error) {
+
+                console.error(
+                    "Thumbnail update error:",
+                    error
+                );
+
+
+                alert(
+                    "❌ Server connection failed."
+                );
+            }
+
+        };
+
+
+    input.click();
 }
 
-
-await loadAdminVideos();
-
-
-if (deleteButton) {
-
-    deleteButton.disabled = false;
-
-    deleteButton.textContent =
-        "🗑️ Delete Selected";
-}
-
-
-}
 
 /* =========================================
-HTML ESCAPE
+   JAVASCRIPT ESCAPE
+========================================= */
+
+function escapeJS(value) {
+
+    return String(value)
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'")
+        .replaceAll('"', '\\"')
+        .replaceAll("\n", "\\n")
+        .replaceAll("\r", "\\r");
+}
+
+
+/* =========================================
+   HTML ESCAPE
 ========================================= */
 
 function escapeHTML(value) {
 
+    return String(value)
 
-return String(value)
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
 
-    .replaceAll("&", "&amp;")
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
 
-    .replaceAll("<", "&lt;")
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
 
-    .replaceAll(">", "&gt;")
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
 
-    .replaceAll('"', "&quot;")
-
-    .replaceAll("'", "&#039;");
-
-
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
 }
 
+
 /* =========================================
-AUTO LOGIN
+   TOTAL UPLOADED
 ========================================= */
 
-document.addEventListener(
-"DOMContentLoaded",
-function () {
+function updateTotalUploaded(count) {
 
-
-    const token =
-        sessionStorage.getItem(
-            "adminToken"
+    const totalUploaded =
+        document.getElementById(
+            "totalUploaded"
         );
 
 
-    if (token) {
+    if (totalUploaded) {
 
-        const login =
-            document.getElementById(
-                "adminLogin"
-            );
-
-        const panel =
-            document.getElementById(
-                "uploadPanel"
-            );
-
-
-        if (login) {
-
-            login.style.display =
-                "none";
-        }
-
-
-        if (panel) {
-
-            panel.style.display =
-                "block";
-        }
-
-
-        loadAdminVideos();
+        totalUploaded.textContent =
+            count;
     }
 }
 
 
+/* =========================================
+   SELECT ALL
+========================================= */
+
+function toggleSelectAll() {
+
+    const selectAll =
+        document.getElementById(
+            "selectAllVideos"
+        );
+
+
+    if (!selectAll) {
+        return;
+    }
+
+
+    const checked =
+        selectAll.checked;
+
+
+    const checkboxes =
+        document.querySelectorAll(
+            ".video-checkbox"
+        );
+
+
+    checkboxes.forEach(
+        function (checkbox) {
+
+            checkbox.checked =
+                checked;
+        }
+    );
+
+
+    updateSelectedCount();
+}
+
+
+/* =========================================
+   SELECTED COUNT
+========================================= */
+
+function updateSelectedCount() {
+
+    const selected =
+        document.querySelectorAll(
+            ".video-checkbox:checked"
+        );
+
+
+    const count =
+        selected.length;
+
+
+    const text =
+        document.getElementById(
+            "selectedCount"
+        );
+
+
+    if (text) {
+
+        text.textContent =
+            count +
+            (
+                count === 1
+                    ? " video selected"
+                    : " videos selected"
+            );
+    }
+
+
+    const dashboardSelected =
+        document.getElementById(
+            "dashboardSelected"
+        );
+
+
+    if (dashboardSelected) {
+
+        dashboardSelected.textContent =
+            count;
+    }
+
+
+    const allCheckboxes =
+        document.querySelectorAll(
+            ".video-checkbox"
+        );
+
+
+    const selectAll =
+        document.getElementById(
+            "selectAllVideos"
+        );
+
+
+    if (
+        selectAll &&
+        allCheckboxes.length > 0
+    ) {
+
+        selectAll.checked =
+            selected.length ===
+            allCheckboxes.length;
+
+    } else if (selectAll) {
+
+        selectAll.checked = false;
+    }
+}
+
+
+/* =========================================
+   DELETE SELECTED VIDEOS
+========================================= */
+
+async function deleteSelectedVideos() {
+
+    const selected =
+        document.querySelectorAll(
+            ".video-checkbox:checked"
+        );
+
+
+    if (selected.length === 0) {
+
+        alert(
+            "আগে যে video delete করতে চান সেটি select করুন।"
+        );
+
+        return;
+    }
+
+
+    const count =
+        selected.length;
+
+
+    const confirmed =
+        confirm(
+            count +
+            " টি video permanently delete করতে চান?\n\n" +
+            "এই action undo করা যাবে না।"
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    const token =
+        getAdminToken();
+
+
+    if (!token) {
+
+        alert(
+            "Admin session নেই। আবার login করুন।"
+        );
+
+        return;
+    }
+
+
+    const deleteButton =
+        document.querySelector(
+            ".delete-selected-btn"
+        );
+
+
+    if (deleteButton) {
+
+        deleteButton.disabled = true;
+
+        deleteButton.textContent =
+            "⏳ Deleting...";
+    }
+
+
+    let successCount = 0;
+
+    let failedCount = 0;
+
+
+    for (
+        const checkbox of selected
+    ) {
+
+        const videoId =
+            checkbox.value;
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/api/videos/" +
+                    encodeURIComponent(
+                        videoId
+                    ),
+                    {
+                        method: "DELETE",
+                        headers: {
+                            "x-admin-token":
+                                token
+                        }
+                    }
+                );
+
+
+            let result;
+
+
+            try {
+
+                result =
+                    await response.json();
+
+            } catch {
+
+                result = {
+                    success: false
+                };
+            }
+
+
+            if (
+                response.status === 401 ||
+                response.status === 403
+            ) {
+
+                sessionStorage.removeItem(
+                    "adminToken"
+                );
+
+
+                alert(
+                    "Admin session expired. আবার login করুন।"
+                );
+
+
+                document.getElementById(
+                    "uploadPanel"
+                ).style.display = "none";
+
+
+                document.getElementById(
+                    "adminLogin"
+                ).style.display = "flex";
+
+
+                return;
+            }
+
+
+            if (result.success) {
+
+                successCount++;
+
+            } else {
+
+                failedCount++;
+            }
+
+
+        } catch (error) {
+
+            console.error(
+                "Delete error:",
+                error
+            );
+
+            failedCount++;
+        }
+    }
+
+
+    if (failedCount === 0) {
+
+        alert(
+            "✅ " +
+            successCount +
+            " টি video successfully deleted."
+        );
+
+    } else {
+
+        alert(
+            "Deleted: " +
+            successCount +
+            "\nFailed: " +
+            failedCount
+        );
+    }
+
+
+    await loadAdminVideos();
+
+
+    if (deleteButton) {
+
+        deleteButton.disabled = false;
+
+        deleteButton.textContent =
+            "🗑️ Delete Selected";
+    }
+}
+
+
+/* =========================================
+   AUTO LOGIN
+========================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        const token =
+            sessionStorage.getItem(
+                "adminToken"
+            );
+
+
+        if (token) {
+
+            const login =
+                document.getElementById(
+                    "adminLogin"
+                );
+
+            const panel =
+                document.getElementById(
+                    "uploadPanel"
+                );
+
+
+            if (login) {
+
+                login.style.display =
+                    "none";
+            }
+
+
+            if (panel) {
+
+                panel.style.display =
+                    "block";
+            }
+
+
+            loadAdminVideos();
+        }
+    }
 );
