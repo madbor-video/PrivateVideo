@@ -660,12 +660,17 @@ function makeVideoFromVcdn(
         vcdn.playbackUrl ||
         "";
 
+    // IMPORTANT:
+    // Keep existing Neon thumbnail first.
+    // This prevents VCDN recovery from replacing
+    // our permanent thumbnail.
+
     const thumbnail =
+        oldVideo?.thumbnail ||
         vcdn.poster_url ||
         vcdn.posterUrl ||
         vcdn.thumbnail_url ||
         vcdn.thumbnailUrl ||
-        oldVideo?.thumbnail ||
         "";
 
     const title =
@@ -1266,10 +1271,6 @@ async function uploadVideoToVCDN(
                 headers:
                     vcdnHeaders(),
 
-                // IMPORTANT:
-                // VCDN requires uploadId
-                // NOT upload_id
-
                 body:
                     JSON.stringify({
                         uploadId:
@@ -1428,7 +1429,6 @@ app.post(
                 videoFile.path;
 
             if (thumbnailFile) {
-
                 thumbnailTempPath =
                     thumbnailFile.path;
             }
@@ -1490,7 +1490,8 @@ app.post(
                 );
 
             // =================================================
-            // THUMBNAIL
+            // PERMANENT THUMBNAIL
+            // SAVE INSIDE NEON DATABASE
             // =================================================
 
             let thumbnailUrl =
@@ -1498,27 +1499,72 @@ app.post(
 
             if (thumbnailFile) {
 
-                const safeOriginalName =
-                    path.basename(
+                const extension =
+                    path.extname(
                         thumbnailFile.originalname
+                    ).toLowerCase();
+
+                let mimeType =
+                    "image/jpeg";
+
+                if (
+                    extension === ".png"
+                ) {
+
+                    mimeType =
+                        "image/png";
+
+                } else if (
+                    extension === ".webp"
+                ) {
+
+                    mimeType =
+                        "image/webp";
+
+                } else if (
+                    extension === ".gif"
+                ) {
+
+                    mimeType =
+                        "image/gif";
+
+                } else if (
+                    extension === ".jpg" ||
+                    extension === ".jpeg"
+                ) {
+
+                    mimeType =
+                        "image/jpeg";
+                }
+
+                const thumbnailBuffer =
+                    fs.readFileSync(
+                        thumbnailFile.path
                     );
 
-                const filename =
-                    `${Date.now()}-${safeOriginalName}`;
+                if (
+                    !thumbnailBuffer ||
+                    thumbnailBuffer.length <= 0
+                ) {
 
-                const destination =
-                    path.join(
-                        THUMB_DIR,
-                        filename
+                    throw new Error(
+                        "Thumbnail file is empty"
                     );
+                }
 
-                fs.copyFileSync(
-                    thumbnailFile.path,
-                    destination
-                );
+                const thumbnailBase64 =
+                    thumbnailBuffer.toString(
+                        "base64"
+                    );
 
                 thumbnailUrl =
-                    `/uploads/thumbnails/${filename}`;
+                    `data:${mimeType};base64,${thumbnailBase64}`;
+
+                console.log(
+                    "THUMBNAIL SAVED TO NEON:",
+                    thumbnailBuffer.length,
+                    "bytes"
+                );
             }
 
             // =================================================
@@ -1672,6 +1718,13 @@ app.post(
             console.log(
                 "EMBED:",
                 newVideo.embed_url
+            );
+
+            console.log(
+                "THUMBNAIL:",
+                thumbnailUrl
+                    ? "PERMANENT NEON"
+                    : "NONE"
             );
 
             return res.json({
@@ -1904,7 +1957,7 @@ app.delete(
             }
 
             // =================================================
-            // DELETE LOCAL THUMBNAIL
+            // DELETE OLD LOCAL THUMBNAIL IF IT EXISTS
             // =================================================
 
             if (
@@ -2214,6 +2267,11 @@ async function startServer() {
                 console.log(
                     "VCDN Project:",
                     VCDN_PROJECT_ID
+                );
+
+                console.log(
+                    "THUMBNAILS:",
+                    "PERMANENT NEON STORAGE"
                 );
 
                 console.log(

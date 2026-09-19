@@ -108,7 +108,6 @@ const categories = [
 
 /* =========================================
    VIDEO DATABASE
-   ONLY SERVER UPLOADED VIDEOS
 ========================================= */
 
 const videos = [];
@@ -141,12 +140,18 @@ async function loadUploadedVideos() {
             await response.json();
 
 
-        /* পুরোনো video list সম্পূর্ণ পরিষ্কার */
         videos.length = 0;
 
 
-        /* শুধু server-এর uploaded video যোগ হবে */
         uploadedVideos.forEach(video => {
+
+            /*
+             * IMPORTANT:
+             * Server থেকে পাওয়া VCDN embed_url
+             * 그대로 ব্যবহার হবে।
+             *
+             * /embed/ remove করা যাবে না।
+             */
 
             let embedUrl =
                 video.embed_url ||
@@ -154,31 +159,36 @@ async function loadUploadedVideos() {
                 "";
 
 
-            /* পুরোনো VCDN /embed/ URL ঠিক করা */
-            if (
-                embedUrl.includes(
-                    "https://embed.vcdn.me/embed/"
-                )
-            ) {
+            /*
+             * embed_url না থাকলে vcdn_id থেকে
+             * সঠিক VCDN embed URL তৈরি হবে।
+             */
 
-                embedUrl =
-                    embedUrl.replace(
-                        "https://embed.vcdn.me/embed/",
-                        "https://embed.vcdn.me/"
-                    );
-
-            }
-
-
-            /* VCDN ID থাকলে embed URL তৈরি */
             if (
                 !embedUrl &&
                 video.vcdn_id
             ) {
 
                 embedUrl =
-                    "https://embed.vcdn.me/" +
+                    "https://embed.vcdn.me/embed/" +
                     video.vcdn_id;
+
+            }
+
+
+            /*
+             * শেষ fallback
+             */
+
+            if (
+                !embedUrl &&
+                video.vcdn_id === undefined &&
+                video.vcdnId
+            ) {
+
+                embedUrl =
+                    "https://embed.vcdn.me/embed/" +
+                    video.vcdnId;
 
             }
 
@@ -193,9 +203,14 @@ async function loadUploadedVideos() {
                     video.title ||
                     "Untitled Video",
 
+                /*
+                 * Uncategorized হলে
+                 * Uncategorized-ই থাকবে।
+                 */
+
                 category:
                     video.category ||
-                    "Japanese Mom",
+                    "Uncategorized",
 
                 thumbnail:
                     video.thumbnail ||
@@ -210,6 +225,12 @@ async function loadUploadedVideos() {
 
                 vcdnId:
                     video.vcdn_id ||
+                    video.vcdnId ||
+                    "",
+
+                playbackUrl:
+                    video.playback_url ||
+                    video.playbackUrl ||
                     "",
 
                 views:
@@ -237,17 +258,22 @@ async function loadUploadedVideos() {
         });
 
 
-        /* নতুন upload আগে দেখাবে */
+        /*
+         * নতুন video আগে
+         */
+
         videos.sort(
             (a, b) => {
 
                 const dateA =
-                    new Date(a.createdAt || 0)
-                        .getTime();
+                    new Date(
+                        a.createdAt || 0
+                    ).getTime();
 
                 const dateB =
-                    new Date(b.createdAt || 0)
-                        .getTime();
+                    new Date(
+                        b.createdAt || 0
+                    ).getTime();
 
                 return dateB - dateA;
 
@@ -286,7 +312,7 @@ async function loadUploadedVideos() {
                     grid-column:1/-1;
                 ">
 
-                    এখনো কোনো video upload করা হয়নি।
+                    Video load করা যায়নি।
 
                 </div>
 
@@ -347,7 +373,9 @@ function formatNumber(number) {
 function renderVideos() {
 
     const grid =
-        document.getElementById("videoGrid");
+        document.getElementById(
+            "videoGrid"
+        );
 
 
     if (!grid) {
@@ -455,12 +483,34 @@ function renderVideos() {
 
             <div class="thumbnail-wrap">
 
-                <img
-                    class="thumbnail"
-                    src="${escapeHTML(video.thumbnail)}"
-                    loading="lazy"
-                    alt="${escapeHTML(video.title)}"
-                >
+                ${
+                    video.thumbnail
+                    ?
+                    `
+                    <img
+                        class="thumbnail"
+                        src="${escapeHTML(video.thumbnail)}"
+                        loading="lazy"
+                        alt="${escapeHTML(video.title)}"
+                    >
+                    `
+                    :
+                    `
+                    <div
+                        class="thumbnail"
+                        style="
+                            display:flex;
+                            align-items:center;
+                            justify-content:center;
+                            background:#111;
+                            color:#fff;
+                            font-size:40px;
+                        "
+                    >
+                        ▶
+                    </div>
+                    `
+                }
 
                 <div class="play-button">
                     ▶
@@ -696,16 +746,16 @@ function previousPage() {
 
 /* =========================================
    OPEN VIDEO
-   SUPPORT VCDN
 ========================================= */
 
 function openVideo(video) {
 
     /*
-       VCDN video হলে videoUrl খালি থাকতে পারে।
-       তাই videoUrl অথবা embedUrl অথবা vcdnId
-       যেকোনো একটি থাকলেই watch page খুলবে।
-    */
+     * VCDN video হলে videoUrl খালি থাকতে পারে।
+     *
+     * embedUrl অথবা vcdnId থাকলেই
+     * watch.html খুলবে।
+     */
 
     if (
         !video.videoUrl &&

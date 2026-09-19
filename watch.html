@@ -1,796 +1,614 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
-
-    <title>Watch Video - Private Video Hub</title>
-
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Video</title>
 
     <style>
+        * {
+            box-sizing: border-box;
+        }
 
-        .watch-player {
-            width: 100%;
-            aspect-ratio: 16 / 9;
+        body {
+            margin: 0;
             background: #000;
-            overflow: hidden;
-            border-radius: 12px;
-        }
-
-        .watch-player iframe {
-            width: 100%;
-            height: 100%;
-            border: 0;
-            display: block;
-        }
-
-        .watch-views {
-            margin-top: 10px;
-            font-size: 14px;
-            color: #999;
-        }
-
-        .watch-views strong {
             color: #fff;
-            font-weight: 600;
+            font-family: Arial, sans-serif;
         }
 
-    </style>
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
 
+        .back-btn {
+            display: inline-block;
+            margin-bottom: 15px;
+            padding: 10px 16px;
+            background: #222;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+        .back-btn:hover {
+            background: #333;
+        }
+
+        .video-box {
+            width: 100%;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        #mainVideoFrame {
+            display: block;
+            width: 100%;
+            height: 75vh;
+            min-height: 400px;
+            border: none;
+            background: #000;
+        }
+
+        .video-info {
+            padding: 18px 0;
+        }
+
+        .video-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .video-category {
+            color: #aaa;
+            font-size: 15px;
+        }
+
+        .related-title {
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 22px;
+        }
+
+        .related-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 15px;
+        }
+
+        .related-card {
+            background: #151515;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .related-card img {
+            width: 100%;
+            height: 130px;
+            object-fit: cover;
+            display: block;
+            background: #222;
+        }
+
+        .related-card-title {
+            padding: 10px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .message {
+            text-align: center;
+            padding: 50px 20px;
+            color: #aaa;
+        }
+
+        @media (max-width: 700px) {
+            .container {
+                padding: 10px;
+            }
+
+            #mainVideoFrame {
+                height: 55vh;
+                min-height: 250px;
+            }
+
+            .video-title {
+                font-size: 19px;
+            }
+
+            .related-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            .related-card img {
+                height: 100px;
+            }
+        }
+    </style>
 </head>
 
 <body>
 
-<!-- LOGIN PROTECTION -->
+<div class="container">
+
+    <a href="index.html" class="back-btn">← Back</a>
+
+    <div class="video-box">
+        <iframe
+            id="mainVideoFrame"
+            src=""
+            title="Video Player"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            allowfullscreen
+            referrerpolicy="no-referrer">
+        </iframe>
+    </div>
+
+    <div class="video-info">
+        <div id="videoTitle" class="video-title">Loading...</div>
+        <div id="videoCategory" class="video-category"></div>
+    </div>
+
+    <div id="relatedSection">
+        <div class="related-title">Related Videos</div>
+        <div id="relatedVideos" class="related-grid"></div>
+    </div>
+
+</div>
 
 <script>
 
-    if (
-        sessionStorage.getItem("videoAuth") !== "true"
-    ) {
+    // ==============================
+    // LOGIN CHECK
+    // ==============================
 
+    if (sessionStorage.getItem("videoAuth") !== "true") {
         window.location.href = "login.html";
-
     }
 
-</script>
 
+    // ==============================
+    // VARIABLES
+    // ==============================
 
-<!-- HEADER -->
+    const videoFrame = document.getElementById("mainVideoFrame");
+    const videoTitle = document.getElementById("videoTitle");
+    const videoCategory = document.getElementById("videoCategory");
+    const relatedVideos = document.getElementById("relatedVideos");
 
-<header class="top-header">
-
-    <div class="logo">
-        PRIVATE<span>VIDEO</span>
-    </div>
-
-    <button
-        onclick="goHome()"
-        class="logout-btn"
-    >
-        ← Back
-    </button>
-
-</header>
-
-
-<!-- WATCH PAGE -->
-
-<main class="watch-main">
-
-    <section class="watch-player-section">
-
-        <div class="watch-player">
-
-            <iframe
-                id="mainVideoFrame"
-                src=""
-                title="Video Player"
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowfullscreen
-                referrerpolicy="strict-origin-when-cross-origin"
-            ></iframe>
-
-        </div>
-
-
-        <div class="watch-info">
-
-            <h1 id="watchTitle">
-                Loading video...
-            </h1>
-
-            <div
-                id="watchCategory"
-                class="watch-category"
-            ></div>
-
-            <div class="watch-views">
-
-                <strong id="watchViews">
-                    0
-                </strong>
-
-                Views
-
-            </div>
-
-        </div>
-
-    </section>
-
-
-    <!-- RELATED VIDEOS -->
-
-    <section class="related-section">
-
-        <div class="related-heading">
-
-            <small>
-                VIDEO COLLECTION
-            </small>
-
-            <h2>
-                Related Videos
-            </h2>
-
-        </div>
-
-        <div
-            id="relatedGrid"
-            class="video-grid"
-        ></div>
-
-    </section>
-
-</main>
-
-
-<!-- FOOTER -->
-
-<footer>
-
-    <div class="footer-logo">
-        PRIVATE VIDEO
-    </div>
-
-    <p>
-        Private video collection.
-    </p>
-
-    <p class="copyright">
-        © 2026 Private Video Hub. All rights reserved.
-    </p>
-
-</footer>
-
-
-<script>
-
-    const videoFrame =
-        document.getElementById(
-            "mainVideoFrame"
-        );
-
-
-    let allVideos = [];
-
+    let videos = [];
     let currentVideo = null;
 
 
-    /* =====================================
-       HOME
-    ===================================== */
+    // ==============================
+    // GET VIDEO ID
+    // ==============================
 
-    function goHome() {
-
-        window.location.href =
-            "index.html";
-
-    }
+    const params = new URLSearchParams(window.location.search);
+    const requestedId = params.get("id");
 
 
-    /* =====================================
-       VIEWS
-    ===================================== */
-
-    function getDisplayViews(videoId) {
-
-        let hash = 0;
-
-        const text =
-            String(
-                videoId || "video"
-            );
-
-
-        for (
-            let i = 0;
-            i < text.length;
-            i++
-        ) {
-
-            hash =
-                (
-                    (hash << 5) -
-                    hash
-                ) +
-                text.charCodeAt(i);
-
-            hash |= 0;
-
-        }
-
-
-        hash =
-            Math.abs(hash);
-
-
-        const min =
-            30000000;
-
-        const max =
-            45000000;
-
-
-        const views =
-            min +
-            (
-                hash %
-                (
-                    max -
-                    min +
-                    1
-                )
-            );
-
-
-        return formatViews(
-            views
-        );
-
-    }
-
-
-    /* =====================================
-       FORMAT VIEWS
-    ===================================== */
-
-    function formatViews(number) {
-
-        if (number >= 1000000) {
-
-            return (
-                (number / 1000000)
-                    .toFixed(1)
-                    .replace(".0", "") +
-                "M"
-            );
-
-        }
-
-
-        if (number >= 1000) {
-
-            return (
-                (number / 1000)
-                    .toFixed(1)
-                    .replace(".0", "") +
-                "K"
-            );
-
-        }
-
-
-        return String(number);
-
-    }
-
-
-    /* =====================================
-       CREATE VCDN URL
-    ===================================== */
+    // ==============================
+    // VCDN URL
+    // ==============================
 
     function createVcdnUrl(video) {
 
-        /*
-         * সবসময় vcdn_id-কে priority দেওয়া হচ্ছে।
-         *
-         * Correct VCDN format:
-         *
-         * https://embed.vcdn.me/VIDEO_ID
-         *
-         * Wrong old format:
-         *
-         * https://embed.vcdn.me/embed/VIDEO_ID
-         */
-
-
-        if (video.vcdn_id) {
-
-            return (
-                "https://embed.vcdn.me/" +
-                video.vcdn_id
-            );
-
+        if (!video) {
+            return "";
         }
 
+        // Use exact VCDN embed URL from server
+        if (video.embed_url) {
 
-        let url =
-            video.embed_url ||
-            video.embedUrl ||
-            video.video ||
-            "";
-
-
-        if (
-            url.includes(
-                "https://embed.vcdn.me/embed/"
-            )
-        ) {
-
-            url =
-                url.replace(
+            return video.embed_url
+                .replace(
                     "https://embed.vcdn.me/embed/",
                     "https://embed.vcdn.me/"
                 );
-
         }
 
+        if (video.embedUrl) {
 
-        return url;
+            return video.embedUrl
+                .replace(
+                    "https://embed.vcdn.me/embed/",
+                    "https://embed.vcdn.me/"
+                );
+        }
 
+        // VCDN video ID fallback
+        if (video.vcdn_id) {
+
+            return "https://embed.vcdn.me/" +
+                   video.vcdn_id;
+        }
+
+        // Normal video fallback
+        if (video.video) {
+            return video.video;
+        }
+
+        if (video.videoUrl) {
+            return video.videoUrl;
+        }
+
+        return "";
     }
 
 
-    /* =====================================
-       LOAD VIDEOS
-    ===================================== */
+    // ==============================
+    // OPEN VIDEO
+    // ==============================
+
+    function openCurrentVideo() {
+
+        if (!currentVideo) {
+
+            videoTitle.textContent =
+                "Video not found";
+
+            return;
+        }
+
+        videoTitle.textContent =
+            currentVideo.title ||
+            "Untitled Video";
+
+        videoCategory.textContent =
+            currentVideo.category ||
+            "";
+
+        const playerUrl =
+            createVcdnUrl(currentVideo);
+
+        if (!playerUrl) {
+
+            videoFrame.removeAttribute("src");
+
+            videoTitle.textContent =
+                "Video URL not found";
+
+            return;
+        }
+
+        console.log(
+            "VIDEO PLAYER URL:",
+            playerUrl
+        );
+
+        videoFrame.src = playerUrl;
+    }
+
+
+    // ==============================
+    // LOAD RELATED VIDEOS
+    // ==============================
+
+    function loadRelatedVideos() {
+
+        relatedVideos.innerHTML = "";
+
+        if (
+            !currentVideo ||
+            videos.length === 0
+        ) {
+            return;
+        }
+
+        const related =
+            videos
+                .filter(video =>
+                    String(video.id) !==
+                    String(currentVideo.id)
+                )
+                .slice(0, 12);
+
+        related.forEach(video => {
+
+            const card =
+                document.createElement("div");
+
+            card.className =
+                "related-card";
+
+            const thumbnail =
+                video.thumbnail ||
+                video.thumbnailUrl ||
+                "";
+
+            const title =
+                video.title ||
+                "Untitled Video";
+
+            card.innerHTML = `
+                <img
+                    src="${escapeHTML(thumbnail)}"
+                    alt="${escapeHTML(title)}"
+                    onerror="this.style.display='none'"
+                >
+
+                <div class="related-card-title">
+                    ${escapeHTML(title)}
+                </div>
+            `;
+
+            card.addEventListener(
+                "click",
+                function () {
+
+                    const id =
+                        "uploaded-" +
+                        video.id;
+
+                    window.location.href =
+                        "watch.html?id=" +
+                        encodeURIComponent(id);
+                }
+            );
+
+            relatedVideos.appendChild(card);
+        });
+    }
+
+
+    // ==============================
+    // LOAD VIDEOS
+    // ==============================
 
     async function loadVideos() {
 
         try {
 
             const response =
-                await fetch(
-                    "/api/videos",
-                    {
-                        cache: "no-store"
-                    }
-                );
-
+                await fetch("/api/videos");
 
             if (!response.ok) {
 
                 throw new Error(
-                    "Could not load videos"
+                    "Failed to load videos: " +
+                    response.status
                 );
-
             }
 
-
-            const serverVideos =
+            const data =
                 await response.json();
 
-
-            allVideos =
-                serverVideos.map(
-                    video => {
-
-                        return {
-
-                            id:
-                                "uploaded-" +
-                                video.id,
-
-                            title:
-                                video.title ||
-                                "Untitled Video",
-
-                            category:
-                                video.category ||
-                                "",
-
-                            thumbnail:
-                                video.thumbnail ||
-                                "",
-
-                            videoUrl:
-                                video.video ||
-                                "",
-
-                            embedUrl:
-                                createVcdnUrl(
-                                    video
-                                ),
-
-                            vcdnId:
-                                video.vcdn_id ||
-                                "",
-
-                            uploaded:
-                                true
-
-                        };
-
-                    }
-                );
-
+            videos =
+                Array.isArray(data)
+                    ? data
+                    : [];
 
             console.log(
-                "Loaded videos:",
-                allVideos
+                "VIDEOS:",
+                videos
             );
 
 
-            openCurrentVideo();
-
-        }
-        catch (error) {
-
-            console.error(
-                "Video loading error:",
-                error
-            );
-
-
-            document.getElementById(
-                "watchTitle"
-            ).textContent =
-                "Could not load video.";
-
-        }
-
-    }
-
-
-    /* =====================================
-       OPEN CURRENT VIDEO
-    ===================================== */
-
-    function openCurrentVideo() {
-
-        const params =
-            new URLSearchParams(
-                window.location.search
-            );
-
-
-        const videoId =
-            params.get("id");
-
-
-        console.log(
-            "Requested video ID:",
-            videoId
-        );
-
-
-        if (!videoId) {
-
-            document.getElementById(
-                "watchTitle"
-            ).textContent =
-                "Video not found.";
-
-            return;
-
-        }
-
-
-        currentVideo =
-            allVideos.find(
-                video =>
-                    video.id === videoId
-            );
-
-
-        console.log(
-            "Current video:",
-            currentVideo
-        );
-
-
-        if (!currentVideo) {
-
-            document.getElementById(
-                "watchTitle"
-            ).textContent =
-                "Video not found.";
-
-            return;
-
-        }
-
-
-        /* =================================
-           VCDN PLAYER
-        ================================= */
-
-
-        const playerUrl =
-            currentVideo.embedUrl;
-
-
-        console.log(
-            "FINAL VCDN PLAYER URL:",
-            playerUrl
-        );
-
-
-        if (!playerUrl) {
-
-            document.getElementById(
-                "watchTitle"
-            ).textContent =
-                "VCDN player URL not found.";
-
-            return;
-
-        }
-
-
-        /*
-         * iframe-এ শুধু correct VCDN URL যাবে।
-         */
-
-        videoFrame.src =
-            playerUrl;
-
-
-        /* =================================
-           VIDEO INFORMATION
-        ================================= */
-
-
-        document.getElementById(
-            "watchTitle"
-        ).textContent =
-            currentVideo.title;
-
-
-        document.getElementById(
-            "watchCategory"
-        ).textContent =
-            currentVideo.category;
-
-
-        document.getElementById(
-            "watchViews"
-        ).textContent =
-            getDisplayViews(
-                currentVideo.id
-            );
-
-
-        document.title =
-            currentVideo.title +
-            " - Private Video Hub";
-
-
-        renderRelatedVideos();
-
-    }
-
-
-    /* =====================================
-       RELATED VIDEOS
-    ===================================== */
-
-    function renderRelatedVideos() {
-
-        const grid =
-            document.getElementById(
-                "relatedGrid"
-            );
-
-
-        if (
-            !grid ||
-            !currentVideo
-        ) {
-
-            return;
-
-        }
-
-
-        grid.innerHTML = "";
-
-
-        let related =
-            allVideos.filter(
-                video =>
-                    video.category ===
-                        currentVideo.category &&
-                    video.id !==
-                        currentVideo.id
-            );
-
-
-        related =
-            related.slice(
-                0,
-                12
-            );
-
-
-        if (
-            related.length === 0
-        ) {
-
-            grid.innerHTML = `
-
-                <div class="no-related">
-
-                    No related videos available yet.
-
-                </div>
-
-            `;
-
-            return;
-
-        }
-
-
-        related.forEach(
-            video => {
-
-                const card =
-                    document.createElement(
-                        "div"
-                    );
-
-
-                card.className =
-                    "video-card";
-
-
-                const thumbnail =
-                    video.thumbnail
-                        ? escapeHTML(
-                            video.thumbnail
-                        )
-                        : "";
-
-
-                card.innerHTML = `
-
-                    <div class="thumbnail-wrap">
-
-                        ${
-                            thumbnail
-                            ?
-                            `
-                            <img
-                                class="thumbnail"
-                                src="${thumbnail}"
-                                loading="lazy"
-                                alt="${escapeHTML(
-                                    video.title
-                                )}"
-                            >
-                            `
-                            :
-                            `
-                            <div
-                                class="thumbnail"
-                                style="
-                                    display:flex;
-                                    align-items:center;
-                                    justify-content:center;
-                                    background:#111;
-                                    color:#fff;
-                                    font-size:40px;
-                                "
-                            >
-                                ▶
-                            </div>
-                            `
-                        }
-
-                        <div class="play-button">
-                            ▶
-                        </div>
-
-                    </div>
-
-
-                    <div class="card-body">
-
-                        <div class="video-title">
-                            ${escapeHTML(
-                                video.title
-                            )}
-                        </div>
-
-
-                        <div class="video-category">
-                            ${escapeHTML(
-                                video.category
-                            )}
-                        </div>
-
-                    </div>
-
-                `;
-
-
-                card.onclick =
-                    function () {
-
-                        window.location.href =
-                            "watch.html?id=" +
-                            encodeURIComponent(
-                                video.id
-                            );
-
+            // ==============================
+            // CONVERT SERVER VIDEOS
+            // ==============================
+
+            videos =
+                videos.map(video => {
+
+                    const mapped = {
+
+                        ...video,
+
+                        id:
+                            video.id,
+
+                        title:
+                            video.title ||
+                            "Untitled Video",
+
+                        category:
+                            video.category ||
+                            "Uncategorized",
+
+                        thumbnail:
+                            video.thumbnail ||
+                            video.thumbnail_url ||
+                            video.poster_url ||
+                            "",
+
+                        videoUrl:
+                            video.video ||
+                            video.videoUrl ||
+                            "",
+
+                        embedUrl:
+                            video.embed_url ||
+                            video.embedUrl ||
+                            "",
+
+                        playbackUrl:
+                            video.playback_url ||
+                            video.playbackUrl ||
+                            "",
+
+                        vcdn_id:
+                            video.vcdn_id ||
+                            ""
                     };
 
 
-                grid.appendChild(
-                    card
-                );
+                    // ==============================
+                    // CREATE VCDN URL
+                    // WITHOUT /embed/
+                    // ==============================
 
+                    if (
+                        !mapped.embedUrl &&
+                        mapped.vcdn_id
+                    ) {
+
+                        mapped.embedUrl =
+                            "https://embed.vcdn.me/" +
+                            mapped.vcdn_id;
+                    }
+
+                    else if (
+                        mapped.embedUrl
+                    ) {
+
+                        mapped.embedUrl =
+                            mapped.embedUrl.replace(
+                                "https://embed.vcdn.me/embed/",
+                                "https://embed.vcdn.me/"
+                            );
+                    }
+
+                    return mapped;
+                });
+
+
+            console.log(
+                "PROCESSED VIDEOS:",
+                videos
+            );
+
+
+            // ==============================
+            // FIND REQUESTED VIDEO
+            // ==============================
+
+            currentVideo =
+                videos.find(video => {
+
+                    const normalId =
+                        String(video.id);
+
+                    const uploadedId =
+                        "uploaded-" +
+                        normalId;
+
+                    return (
+
+                        normalId ===
+                        String(requestedId)
+
+                        ||
+
+                        uploadedId ===
+                        String(requestedId)
+
+                        ||
+
+                        String(video.vcdn_id) ===
+                        String(requestedId)
+                    );
+                });
+
+
+            if (!currentVideo) {
+
+                document.querySelector(
+                    ".video-box"
+                ).innerHTML =
+                    `<div class="message">
+                        Video not found.
+                    </div>`;
+
+                videoTitle.textContent =
+                    "Video not found";
+
+                return;
             }
-        );
 
+
+            // ==============================
+            // OPEN CURRENT VIDEO
+            // ==============================
+
+            openCurrentVideo();
+
+
+            // ==============================
+            // RELATED VIDEOS
+            // ==============================
+
+            loadRelatedVideos();
+
+        }
+
+        catch (error) {
+
+            console.error(
+                "LOAD VIDEO ERROR:",
+                error
+            );
+
+            videoTitle.textContent =
+                "Could not load videos";
+
+            videoCategory.textContent =
+                error.message || "";
+        }
     }
 
 
-    /* =====================================
-       HTML ESCAPE
-    ===================================== */
+    // ==============================
+    // ESCAPE HTML
+    // ==============================
 
     function escapeHTML(value) {
 
+        if (
+            value === null ||
+            value === undefined
+        ) {
+            return "";
+        }
+
         return String(value)
 
-            .replaceAll(
-                "&",
+            .replace(
+                /&/g,
                 "&amp;"
             )
 
-            .replaceAll(
-                "<",
+            .replace(
+                /</g,
                 "&lt;"
             )
 
-            .replaceAll(
-                ">",
+            .replace(
+                />/g,
                 "&gt;"
             )
 
-            .replaceAll(
-                '"',
+            .replace(
+                /"/g,
                 "&quot;"
             )
 
-            .replaceAll(
-                "'",
+            .replace(
+                /'/g,
                 "&#039;"
             );
-
     }
 
 
-    /* =====================================
-       START
-    ===================================== */
+    // ==============================
+    // START
+    // ==============================
 
-    loadVideos();
+    document.addEventListener(
+        "DOMContentLoaded",
+        loadVideos
+    );
 
 </script>
 
 </body>
-
 </html>
-
+```
