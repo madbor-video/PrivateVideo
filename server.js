@@ -1,521 +1,1286 @@
 const express = require("express");
 const multer = require("multer");
-const path = require("path");
 const fs = require("fs");
-const crypto = require("crypto");
+const path = require("path");
 
 const app = express();
 
 const PORT = process.env.PORT || 3000;
 const HOST = "0.0.0.0";
 
-const videoFolder = path.join(__dirname, "uploads", "videos");
-const thumbnailFolder = path.join(__dirname, "uploads", "thumbnails");
-const videosFile = path.join(__dirname, "videos.json");
-
-fs.mkdirSync(videoFolder, { recursive: true });
-fs.mkdirSync(thumbnailFolder, { recursive: true });
-
-if (!fs.existsSync(videosFile)) {
-fs.writeFileSync(videosFile, "[]", "utf8");
-}
-
 const ADMIN_USERNAME = "tasmiya";
 const ADMIN_PASSWORD = "1922006";
 
-const adminSessions = new Set();
+const VCDN_API_KEY = process.env.VCDN_API_KEY;
 
-function readVideos() {
-try {
-if (!fs.existsSync(videosFile)) {
-return [];
-}
+const DATA_DIR = path.join(__dirname, "data");
+const UPLOADS_DIR = path.join(__dirname, "uploads");
+const VIDEO_DIR = path.join(UPLOADS_DIR, "videos");
+const THUMBNAIL_DIR = path.join(UPLOADS_DIR, "thumbnails");
+const VIDEOS_FILE = path.join(DATA_DIR, "videos.json");
 
-
-    const data = fs.readFileSync(videosFile, "utf8");
-
-    if (!data.trim()) {
-        return [];
+[
+    DATA_DIR,
+    UPLOADS_DIR,
+    VIDEO_DIR,
+    THUMBNAIL_DIR
+].forEach((dir) => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
     }
+});
 
-    const videos = JSON.parse(data);
-
-    return Array.isArray(videos) ? videos : [];
-} catch (error) {
-    console.error("READ VIDEOS ERROR:", error);
-    return [];
+if (!fs.existsSync(VIDEOS_FILE)) {
+    fs.writeFileSync(VIDEOS_FILE, "[]", "utf8");
 }
 
-
-}
-
-function saveVideos(videos) {
-fs.writeFileSync(
-videosFile,
-JSON.stringify(videos, null, 2),
-"utf8"
-);
-}
-
-function checkAdmin(req, res, next) {
-const token = req.headers["x-admin-token"];
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(__dirname));
+app.use("/uploads", express.static(UPLOADS_DIR));
 
 
-if (!token || !adminSessions.has(token)) {
-    return res.status(401).json({
-        success: false,
-        message: "Unauthorized. Admin login required."
-    });
-}
-
-next();
-
-
-}
+// =========================================
+// MULTER
+// =========================================
 
 const storage = multer.diskStorage({
-destination: function (req, file, cb) {
-if (file.fieldname === "video") {
-cb(null, videoFolder);
-} else if (file.fieldname === "thumbnail") {
-cb(null, thumbnailFolder);
-} else {
-cb(new Error("Invalid file field."));
-}
-},
+    destination: function (req, file, cb) {
 
+        if (file.fieldname === "video1") {
+            cb(null, VIDEO_DIR);
 
-filename: function (req, file, cb) {
-    const extension = path.extname(file.originalname).toLowerCase();
+        } else if (file.fieldname === "thumbnail1") {
+            cb(null, THUMBNAIL_DIR);
 
-    const filename =
-        Date.now() +
-        "-" +
-        crypto.randomBytes(6).toString("hex") +
-        extension;
+        } else {
+            cb(new Error("Unexpected file field"));
+        }
+    },
 
-    cb(null, filename);
-}
+    filename: function (req, file, cb) {
 
+        const ext = path.extname(file.originalname) || "";
 
+        const random = Math.random()
+            .toString(36)
+            .substring(2, 10);
+
+        cb(
+            null,
+            `${Date.now()}-${random}${ext}`
+        );
+    }
 });
 
 const upload = multer({
-storage: storage,
-limits: {
-fileSize: 5 * 1024 * 1024 * 1024
-}
+    storage: storage,
+
+    limits: {
+        fileSize: 5 * 1024 * 1024 * 1024
+    }
 });
 
-app.use(express.json({ limit: "10mb" }));
 
-app.use(express.static(__dirname));
+// =========================================
+// ADMIN SESSIONS
+// =========================================
 
-app.use(
-"/uploads",
-express.static(path.join(__dirname, "uploads"))
-);
+const adminSessions = new Set();
 
-app.post("/api/admin-login", (req, res) => {
-try {
-const username = String(req.body.username || "").trim();
-const password = String(req.body.password || "");
+function getAdminToken(req) {
+    return req.headers["x-admin-token"] || "";
+}
 
+function requireAdmin(req, res, next) {
 
-    if (
-        username === ADMIN_USERNAME &&
-        password === ADMIN_PASSWORD
-    ) {
-        const token = crypto.randomBytes(32).toString("hex");
+    const token = getAdminToken(req);
 
-        adminSessions.add(token);
+    if (!token || !adminSessions.has(token)) {
 
-        console.log("ADMIN LOGIN SUCCESS");
-
-        return res.json({
-            success: true,
-            token: token,
-            message: "Admin login successful."
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized"
         });
     }
 
-    console.log("ADMIN LOGIN FAILED");
-
-    return res.status(401).json({
-        success: false,
-        message: "Wrong admin username or password."
-    });
-} catch (error) {
-    console.error("LOGIN ERROR:", error);
-
-    return res.status(500).json({
-        success: false,
-        message: "Login failed."
-    });
+    next();
 }
 
 
-});
+// =========================================
+// VIDEOS DATABASE
+// =========================================
 
-app.post("/api/admin-logout", checkAdmin, (req, res) => {
-const token = req.headers["x-admin-token"];
-
-
-adminSessions.delete(token);
-
-res.json({
-    success: true,
-    message: "Logged out."
-});
-
-
-});
-
-app.post(
-"/api/upload",
-checkAdmin,
-upload.fields([
-{
-name: "video",
-maxCount: 1
-},
-{
-name: "thumbnail",
-maxCount: 1
-}
-]),
-(req, res) => {
-let uploadedVideoPath = null;
-let uploadedThumbnailPath = null;
-
+function readVideos() {
 
     try {
-        if (
-            !req.files ||
-            !req.files.video ||
-            !req.files.video[0]
-        ) {
-            return res.status(400).json({
-                success: false,
-                message: "Video file is required."
-            });
-        }
 
-        if (
-            !req.files.thumbnail ||
-            !req.files.thumbnail[0]
-        ) {
-            uploadedVideoPath = path.join(
-                videoFolder,
-                req.files.video[0].filename
-            );
-
-            if (fs.existsSync(uploadedVideoPath)) {
-                fs.unlinkSync(uploadedVideoPath);
-            }
-
-            return res.status(400).json({
-                success: false,
-                message: "Thumbnail is required."
-            });
-        }
-
-        const title = String(
-            req.body.title || "Untitled Video"
-        ).trim();
-
-        const category = String(
-            req.body.category || "Other"
-        ).trim();
-
-        const videoFile = req.files.video[0];
-        const thumbnailFile = req.files.thumbnail[0];
-
-        uploadedVideoPath = path.join(
-            videoFolder,
-            videoFile.filename
+        const data = fs.readFileSync(
+            VIDEOS_FILE,
+            "utf8"
         );
 
-        uploadedThumbnailPath = path.join(
-            thumbnailFolder,
-            thumbnailFile.filename
-        );
+        return JSON.parse(data);
 
-        const newVideo = {
-            id:
-                Date.now().toString() +
-                "-" +
-                crypto.randomBytes(4).toString("hex"),
-
-            title: title,
-
-            category: category,
-
-            video:
-                "/uploads/videos/" +
-                videoFile.filename,
-
-            thumbnail:
-                "/uploads/thumbnails/" +
-                thumbnailFile.filename,
-
-            views: 0,
-
-            likes: 0,
-
-            users: 0,
-
-            uploadedAt: new Date().toISOString()
-        };
-
-        const videos = readVideos();
-
-        videos.unshift(newVideo);
-
-        saveVideos(videos);
-
-        console.log("=================================");
-        console.log("NEW VIDEO UPLOADED");
-        console.log("Title:", newVideo.title);
-        console.log("Category:", newVideo.category);
-        console.log("Video:", newVideo.video);
-        console.log("Thumbnail:", newVideo.thumbnail);
-        console.log("=================================");
-
-        return res.json({
-            success: true,
-            message: "Video uploaded successfully!",
-            video: newVideo
-        });
     } catch (error) {
-        console.error("UPLOAD ERROR:", error);
 
-        try {
-            if (
-                uploadedVideoPath &&
-                fs.existsSync(uploadedVideoPath)
-            ) {
-                fs.unlinkSync(uploadedVideoPath);
-            }
-
-            if (
-                uploadedThumbnailPath &&
-                fs.existsSync(uploadedThumbnailPath)
-            ) {
-                fs.unlinkSync(uploadedThumbnailPath);
-            }
-        } catch (cleanupError) {
-            console.error(
-                "CLEANUP ERROR:",
-                cleanupError
-            );
-        }
-
-        return res.status(500).json({
-            success: false,
-            message: "Video upload failed."
-        });
-    }
-}
-
-
-);
-
-app.get("/api/videos", (req, res) => {
-try {
-const videos = readVideos();
-
-
-    res.json(videos);
-} catch (error) {
-    console.error("GET VIDEOS ERROR:", error);
-
-    res.status(500).json({
-        success: false,
-        message: "Could not load videos."
-    });
-}
-
-
-});
-
-app.get("/api/videos/:id", (req, res) => {
-try {
-const videoId = String(req.params.id);
-
-
-    const videos = readVideos();
-
-    const video = videos.find(
-        item => String(item.id) === videoId
-    );
-
-    if (!video) {
-        return res.status(404).json({
-            success: false,
-            message: "Video not found."
-        });
-    }
-
-    res.json({
-        success: true,
-        video: video
-    });
-} catch (error) {
-    console.error("GET SINGLE VIDEO ERROR:", error);
-
-    res.status(500).json({
-        success: false,
-        message: "Could not load video."
-    });
-}
-
-
-});
-
-app.delete("/api/videos/:id", checkAdmin, (req, res) => {
-try {
-const videoId = String(req.params.id);
-
-
-    const videos = readVideos();
-
-    const index = videos.findIndex(
-        video => String(video.id) === videoId
-    );
-
-    if (index === -1) {
-        return res.status(404).json({
-            success: false,
-            message: "Video not found."
-        });
-    }
-
-    const video = videos[index];
-
-    if (video.video) {
-        const videoFilename = path.basename(video.video);
-
-        const videoPath = path.join(
-            videoFolder,
-            videoFilename
+        console.error(
+            "Could not read videos.json:",
+            error
         );
 
-        if (fs.existsSync(videoPath)) {
-            fs.unlinkSync(videoPath);
-        }
+        return [];
+    }
+}
+
+function saveVideos(videos) {
+
+    fs.writeFileSync(
+        VIDEOS_FILE,
+        JSON.stringify(videos, null, 2),
+        "utf8"
+    );
+}
+
+
+// =========================================
+// VCDN HEADERS
+// =========================================
+
+function getVcdnHeaders(json = false) {
+
+    const headers = {
+        "X-API-Key": VCDN_API_KEY,
+        "Authorization": `Bearer ${VCDN_API_KEY}`
+    };
+
+    if (json) {
+        headers["Content-Type"] = "application/json";
     }
 
-    if (video.thumbnail) {
-        const thumbnailFilename =
-            path.basename(video.thumbnail);
+    return headers;
+}
 
-        const thumbnailPath = path.join(
-            thumbnailFolder,
-            thumbnailFilename
+
+// =========================================
+// READ VCDN RESPONSE
+// =========================================
+
+async function readResponse(response) {
+
+    const text = await response.text();
+
+    let data = null;
+
+    try {
+        data = JSON.parse(text);
+    } catch (error) {
+        data = null;
+    }
+
+    return {
+        text,
+        data
+    };
+}
+
+
+// =========================================
+// EXTRACT VCDN DATA
+// =========================================
+
+function extractUploadId(data) {
+
+    if (!data) {
+        return "";
+    }
+
+    return (
+        data.upload_id ||
+        data.uploadId ||
+        data.id ||
+        data.data?.upload_id ||
+        data.data?.uploadId ||
+        data.data?.id ||
+        ""
+    );
+}
+
+function extractVideoId(data) {
+
+    if (!data) {
+        return "";
+    }
+
+    return (
+        data.videoId ||
+        data.video_id ||
+        data.id ||
+        data.data?.videoId ||
+        data.data?.video_id ||
+        data.data?.id ||
+        ""
+    );
+}
+
+function extractPlaybackUrl(data) {
+
+    if (!data) {
+        return "";
+    }
+
+    return (
+        data.playback_url ||
+        data.playbackUrl ||
+        data.data?.playback_url ||
+        data.data?.playbackUrl ||
+        ""
+    );
+}
+
+function extractEmbedUrl(data) {
+
+    if (!data) {
+        return "";
+    }
+
+    return (
+        data.embed_url ||
+        data.embedUrl ||
+        data.data?.embed_url ||
+        data.data?.embedUrl ||
+        ""
+    );
+}
+
+
+// =========================================
+// UPLOAD VIDEO TO VCDN
+// =========================================
+
+async function uploadVideoToVCDN(
+    filePath,
+    originalName,
+    title,
+    progressCallback
+) {
+
+    if (!VCDN_API_KEY) {
+
+        throw new Error(
+            "VCDN_API_KEY is not configured."
         );
-
-        if (fs.existsSync(thumbnailPath)) {
-            fs.unlinkSync(thumbnailPath);
-        }
     }
 
-    videos.splice(index, 1);
+    const fileStats = fs.statSync(filePath);
 
-    saveVideos(videos);
+    console.log("");
+    console.log("=================================");
+    console.log("VCDN: Initializing upload...");
+    console.log("File:", originalName);
+    console.log("Size:", fileStats.size, "bytes");
+    console.log("=================================");
+
+    if (!fileStats.size || fileStats.size <= 0) {
+
+        throw new Error(
+            "Video file size is invalid."
+        );
+    }
+
+    progressCallback(0);
+
+
+    // =====================================
+    // INIT
+    // =====================================
+
+    const initResponse = await fetch(
+        "https://cdn.vcdn.me/api/v1/upload/init",
+        {
+            method: "POST",
+
+            headers: getVcdnHeaders(true),
+
+            body: JSON.stringify({
+                filename: originalName,
+                title: title,
+                size: fileStats.size
+            })
+        }
+    );
+
+    const initResult =
+        await readResponse(initResponse);
 
     console.log(
-        "VIDEO DELETED:",
-        video.title
+        "VCDN INIT STATUS:",
+        initResponse.status
     );
 
-    res.json({
-        success: true,
-        message: "Video deleted successfully."
-    });
-} catch (error) {
-    console.error("DELETE ERROR:", error);
+    console.log(
+        "VCDN INIT RESPONSE:",
+        initResult.text
+    );
 
-    res.status(500).json({
-        success: false,
-        message: "Could not delete video."
-    });
+    if (!initResponse.ok) {
+
+        throw new Error(
+            `VCDN init failed: ${
+                initResult.text ||
+                initResponse.statusText
+            }`
+        );
+    }
+
+    const uploadId =
+        extractUploadId(initResult.data);
+
+    if (!uploadId) {
+
+        throw new Error(
+            "VCDN did not return upload_id."
+        );
+    }
+
+    console.log(
+        "VCDN Upload ID:",
+        uploadId
+    );
+
+
+    // =====================================
+    // READ VIDEO
+    // =====================================
+
+    const fileBuffer =
+        fs.readFileSync(filePath);
+
+    const chunkSize =
+        10 * 1024 * 1024;
+
+    let uploadedBytes = 0;
+
+
+    // =====================================
+    // CHUNK UPLOAD
+    // =====================================
+
+    for (
+        let offset = 0;
+        offset < fileBuffer.length;
+        offset += chunkSize
+    ) {
+
+        const chunk =
+            fileBuffer.subarray(
+                offset,
+                Math.min(
+                    offset + chunkSize,
+                    fileBuffer.length
+                )
+            );
+
+        const chunkResponse =
+            await fetch(
+                `https://cdn.vcdn.me/api/v1/upload/${uploadId}/chunk`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        ...getVcdnHeaders(false),
+
+                        "Content-Type":
+                            "application/octet-stream",
+
+                        "Content-Length":
+                            String(chunk.length)
+                    },
+
+                    body: chunk
+                }
+            );
+
+        const chunkResult =
+            await readResponse(chunkResponse);
+
+        if (!chunkResponse.ok) {
+
+            console.error(
+                "VCDN CHUNK STATUS:",
+                chunkResponse.status
+            );
+
+            console.error(
+                "VCDN CHUNK RESPONSE:",
+                chunkResult.text
+            );
+
+            throw new Error(
+                `VCDN chunk upload failed: ${
+                    chunkResult.text ||
+                    chunkResponse.statusText
+                }`
+            );
+        }
+
+        uploadedBytes += chunk.length;
+
+        const percent =
+            Math.min(
+                99,
+                Math.round(
+                    uploadedBytes /
+                    fileBuffer.length *
+                    100
+                )
+            );
+
+        progressCallback(percent);
+
+        console.log(
+            `VCDN chunk progress: ${percent}%`
+        );
+    }
+
+
+    // =====================================
+    // COMPLETE
+    // =====================================
+
+    let completeResponse =
+        await fetch(
+            "https://cdn.vcdn.me/api/v1/upload/complete",
+            {
+                method: "POST",
+
+                headers:
+                    getVcdnHeaders(true),
+
+                body: JSON.stringify({
+                    upload_id: uploadId
+                })
+            }
+        );
+
+    let completeResult =
+        await readResponse(
+            completeResponse
+        );
+
+    console.log(
+        "VCDN COMPLETE STATUS:",
+        completeResponse.status
+    );
+
+    console.log(
+        "VCDN COMPLETE RESPONSE:",
+        completeResult.text
+    );
+
+
+    // =====================================
+    // RETRY WITH uploadId
+    // =====================================
+
+    const completeText =
+        (
+            completeResult.text ||
+            ""
+        ).toLowerCase();
+
+    if (
+        !completeResponse.ok &&
+        (
+            completeText.includes("uploadid required") ||
+            completeText.includes("upload_id required") ||
+            completeText.includes("uploadid")
+        )
+    ) {
+
+        console.log(
+            "VCDN rejected upload_id. Retrying with uploadId..."
+        );
+
+        completeResponse =
+            await fetch(
+                "https://cdn.vcdn.me/api/v1/upload/complete",
+                {
+                    method: "POST",
+
+                    headers:
+                        getVcdnHeaders(true),
+
+                    body: JSON.stringify({
+                        uploadId: uploadId
+                    })
+                }
+            );
+
+        completeResult =
+            await readResponse(
+                completeResponse
+            );
+
+        console.log(
+            "VCDN COMPLETE RETRY STATUS:",
+            completeResponse.status
+        );
+
+        console.log(
+            "VCDN COMPLETE RETRY RESPONSE:",
+            completeResult.text
+        );
+    }
+
+    if (!completeResponse.ok) {
+
+        throw new Error(
+            `VCDN complete failed: ${
+                completeResult.text ||
+                completeResponse.statusText
+            }`
+        );
+    }
+
+
+    // =====================================
+    // VCDN RESULT
+    // =====================================
+
+    const completeData =
+        completeResult.data || {};
+
+    const videoId =
+        extractVideoId(completeData);
+
+    const playbackUrl =
+        extractPlaybackUrl(completeData);
+
+    let embedUrl =
+        extractEmbedUrl(completeData);
+
+
+    // =====================================
+    // CREATE EMBED URL
+    // =====================================
+
+    if (!embedUrl && videoId) {
+
+        embedUrl =
+            `https://embed.vcdn.me/embed/${videoId}`;
+
+        console.log(
+            "VCDN embed URL created automatically:"
+        );
+
+        console.log(embedUrl);
+    }
+
+    progressCallback(100);
+
+
+    console.log("");
+    console.log("=================================");
+    console.log("VCDN UPLOAD COMPLETE");
+    console.log("Video ID:", videoId);
+    console.log("Playback URL:", playbackUrl);
+    console.log("Embed URL:", embedUrl);
+    console.log("=================================");
+
+
+    return {
+
+        id: videoId,
+
+        videoId: videoId,
+
+        upload_id: uploadId,
+
+        uploadId: uploadId,
+
+        playback_url: playbackUrl,
+
+        embed_url: embedUrl
+    };
 }
 
 
-});
+// =========================================
+// ADMIN LOGIN
+// =========================================
 
-app.get("/api/video-test/:filename", (req, res) => {
-try {
-const filename = path.basename(
-req.params.filename
+app.post(
+    "/api/admin-login",
+    (req, res) => {
+
+        const {
+            username,
+            password
+        } = req.body;
+
+        if (
+            username === ADMIN_USERNAME &&
+            password === ADMIN_PASSWORD
+        ) {
+
+            const token =
+                `${Date.now()}-${Math.random()
+                    .toString(36)
+                    .substring(2)}`;
+
+            adminSessions.add(token);
+
+            return res.json({
+                success: true,
+                token: token
+            });
+        }
+
+        return res.status(401).json({
+            success: false,
+            message:
+                "Invalid username or password"
+        });
+    }
 );
 
 
-    const filePath = path.join(
-        videoFolder,
-        filename
-    );
+// =========================================
+// ADMIN LOGOUT
+// =========================================
 
-    if (!fs.existsSync(filePath)) {
-        return res.status(404).json({
-            success: false,
-            message: "Video file not found."
+app.post(
+    "/api/admin-logout",
+    (req, res) => {
+
+        const token =
+            getAdminToken(req);
+
+        if (token) {
+            adminSessions.delete(token);
+        }
+
+        res.json({
+            success: true
         });
     }
-
-    const stats = fs.statSync(filePath);
-
-    res.json({
-        success: true,
-        filename: filename,
-        size: stats.size
-    });
-} catch (error) {
-    console.error("VIDEO TEST ERROR:", error);
-
-    res.status(500).json({
-        success: false,
-        message: "Could not test video."
-    });
-}
+);
 
 
-});
+// =========================================
+// UPLOAD VIDEO
+// =========================================
 
-app.use((error, req, res, next) => {
-if (error instanceof multer.MulterError) {
-if (error.code === "LIMIT_FILE_SIZE") {
-return res.status(413).json({
-success: false,
-message: "File is larger than 5 GB."
-});
-}
+app.post(
+    "/api/upload",
+
+    requireAdmin,
+
+    upload.fields([
+        {
+            name: "video1",
+            maxCount: 1
+        },
+        {
+            name: "thumbnail1",
+            maxCount: 1
+        }
+    ]),
+
+    async (req, res) => {
+
+        let videoFile = null;
+        let thumbnailFile = null;
+
+        try {
+
+            const title =
+                String(
+                    req.body.title || ""
+                ).trim();
+
+            const category =
+                String(
+                    req.body.category || ""
+                ).trim();
 
 
-    return res.status(400).json({
-        success: false,
-        message: error.message
-    });
-}
+            videoFile =
+                req.files?.video1?.[0] ||
+                null;
 
-if (error) {
-    console.error("SERVER ERROR:", error);
-
-    return res.status(500).json({
-        success: false,
-        message: error.message || "Server error."
-    });
-}
-
-next();
+            thumbnailFile =
+                req.files?.thumbnail1?.[0] ||
+                null;
 
 
-});
+            if (!title) {
 
-app.listen(PORT, HOST, () => {
-console.log("=================================");
-console.log("Video website server is running");
-console.log("http://localhost:" + PORT);
-console.log("=================================");
-});
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Video title is required."
+                });
+            }
+
+
+            if (!category) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Video category is required."
+                });
+            }
+
+
+            if (!videoFile) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Video file is required."
+                });
+            }
+
+
+            if (!thumbnailFile) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Thumbnail file is required."
+                });
+            }
+
+
+            console.log("");
+            console.log("=================================");
+            console.log("NEW VIDEO UPLOAD");
+            console.log("Title:", title);
+            console.log("Category:", category);
+            console.log(
+                "File:",
+                videoFile.originalname
+            );
+            console.log("=================================");
+
+
+            // =================================
+            // SEND VIDEO TO VCDN
+            // =================================
+
+            const vcdnVideo =
+                await uploadVideoToVCDN(
+                    videoFile.path,
+                    videoFile.originalname,
+                    title,
+                    function (percent) {
+
+                        console.log(
+                            `Upload Progress: ${percent}%`
+                        );
+                    }
+                );
+
+
+            const finalVideoId =
+                vcdnVideo.id ||
+                vcdnVideo.videoId ||
+                "";
+
+
+            let finalEmbedUrl =
+                vcdnVideo.embed_url ||
+                "";
+
+
+            if (
+                !finalEmbedUrl &&
+                finalVideoId
+            ) {
+
+                finalEmbedUrl =
+                    `https://embed.vcdn.me/embed/${finalVideoId}`;
+            }
+
+
+            // =================================
+            // SAVE DATABASE
+            // =================================
+
+            const videos =
+                readVideos();
+
+
+            const newVideo = {
+
+                id:
+                    Date.now().toString(),
+
+                title:
+                    title,
+
+                category:
+                    category,
+
+                thumbnail:
+                    `/uploads/thumbnails/${thumbnailFile.filename}`,
+
+                video:
+                    finalEmbedUrl ||
+                    vcdnVideo.playback_url ||
+                    "",
+
+                playback_url:
+                    vcdnVideo.playback_url ||
+                    "",
+
+                embed_url:
+                    finalEmbedUrl,
+
+                vcdn_id:
+                    finalVideoId,
+
+                vcdn_upload_id:
+                    vcdnVideo.upload_id ||
+                    vcdnVideo.uploadId ||
+                    "",
+
+                createdAt:
+                    new Date().toISOString()
+            };
+
+
+            videos.unshift(newVideo);
+
+            saveVideos(videos);
+
+
+            // =================================
+            // DELETE TEMP VIDEO
+            // =================================
+
+            try {
+
+                if (
+                    fs.existsSync(
+                        videoFile.path
+                    )
+                ) {
+
+                    fs.unlinkSync(
+                        videoFile.path
+                    );
+
+                    console.log(
+                        "Temporary local video deleted."
+                    );
+                }
+
+            } catch (deleteError) {
+
+                console.warn(
+                    "Could not delete temporary video:",
+                    deleteError.message
+                );
+            }
+
+
+            console.log("");
+            console.log("=================================");
+            console.log(
+                "VIDEO SAVED SUCCESSFULLY"
+            );
+            console.log(
+                "Database ID:",
+                newVideo.id
+            );
+            console.log(
+                "VCDN ID:",
+                newVideo.vcdn_id
+            );
+            console.log(
+                "Embed URL:",
+                newVideo.embed_url
+            );
+            console.log("=================================");
+
+
+            return res.json({
+
+                success: true,
+
+                message:
+                    "Video successfully uploaded to VCDN!",
+
+                video:
+                    newVideo
+            });
+
+
+        } catch (error) {
+
+            console.error("");
+            console.error(
+                "================================="
+            );
+
+            console.error(
+                "UPLOAD ERROR:",
+                error
+            );
+
+            console.error(
+                "================================="
+            );
+
+
+            try {
+
+                if (
+                    videoFile &&
+                    videoFile.path &&
+                    fs.existsSync(
+                        videoFile.path
+                    )
+                ) {
+
+                    fs.unlinkSync(
+                        videoFile.path
+                    );
+                }
+
+            } catch (cleanupError) {
+
+                console.warn(
+                    "Cleanup error:",
+                    cleanupError.message
+                );
+            }
+
+
+            return res.status(500).json({
+
+                success: false,
+
+                message:
+                    error.message ||
+                    "Video upload failed."
+            });
+        }
+    }
+);
+
+
+// =========================================
+// GET ALL VIDEOS
+// =========================================
+
+app.get(
+    "/api/videos",
+    (req, res) => {
+
+        const videos =
+            readVideos();
+
+        res.json(videos);
+    }
+);
+
+
+// =========================================
+// GET SINGLE VIDEO
+// =========================================
+
+app.get(
+    "/api/videos/:id",
+    (req, res) => {
+
+        const videos =
+            readVideos();
+
+        const video =
+            videos.find(
+                item =>
+                    item.id ===
+                    req.params.id
+            );
+
+        if (!video) {
+
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Video not found."
+            });
+        }
+
+        res.json(video);
+    }
+);
+
+
+// =========================================
+// DELETE VIDEO
+// =========================================
+
+app.delete(
+    "/api/videos/:id",
+
+    requireAdmin,
+
+    async (req, res) => {
+
+        try {
+
+            const videos =
+                readVideos();
+
+            const index =
+                videos.findIndex(
+                    item =>
+                        item.id ===
+                        req.params.id
+                );
+
+
+            if (index === -1) {
+
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        "Video not found."
+                });
+            }
+
+
+            const video =
+                videos[index];
+
+
+            // =================================
+            // DELETE FROM VCDN
+            // =================================
+
+            if (
+                VCDN_API_KEY &&
+                video.vcdn_id
+            ) {
+
+                try {
+
+                    const deleteResponse =
+                        await fetch(
+                            `https://cdn.vcdn.me/api/v1/videos/${video.vcdn_id}`,
+                            {
+                                method: "DELETE",
+
+                                headers:
+                                    getVcdnHeaders(false)
+                            }
+                        );
+
+                    console.log(
+                        "VCDN DELETE STATUS:",
+                        deleteResponse.status
+                    );
+
+                } catch (vcdnDeleteError) {
+
+                    console.warn(
+                        "VCDN delete failed:",
+                        vcdnDeleteError.message
+                    );
+                }
+            }
+
+
+            // =================================
+            // DELETE THUMBNAIL
+            // =================================
+
+            if (video.thumbnail) {
+
+                const thumbnailRelative =
+                    video.thumbnail.replace(
+                       (/^\/+/, "")
+                    );
+
+                const thumbnailPath =
+                    path.join(
+                        __dirname,
+                        thumbnailRelative
+                    );
+
+
+                try {
+
+                    if (
+                        fs.existsSync(
+                            thumbnailPath
+                        )
+                    ) {
+
+                        fs.unlinkSync(
+                            thumbnailPath
+                        );
+                    }
+
+                } catch (thumbnailError) {
+
+                    console.warn(
+                        "Thumbnail delete failed:",
+                        thumbnailError.message
+                    );
+                }
+            }
+
+
+            videos.splice(index, 1);
+
+            saveVideos(videos);
+
+
+            res.json({
+
+                success: true,
+
+                message:
+                    "Video deleted successfully."
+            });
+
+
+        } catch (error) {
+
+            console.error(
+                "Delete error:",
+                error
+            );
+
+            res.status(500).json({
+
+                success: false,
+
+                message:
+                    error.message ||
+                    "Delete failed."
+            });
+        }
+    }
+);
+
+
+// =========================================
+// VIDEO TEST
+// =========================================
+
+app.get(
+    "/api/video-test/:filename",
+    (req, res) => {
+
+        const filename =
+            path.basename(
+                req.params.filename
+            );
+
+        const filePath =
+            path.join(
+                VIDEO_DIR,
+                filename
+            );
+
+
+        if (
+            !fs.existsSync(
+                filePath
+            )
+        ) {
+
+            return res.status(404).json({
+
+                success: false,
+
+                message:
+                    "Video file not found."
+            });
+        }
+
+
+        res.json({
+
+            success: true,
+
+            file:
+                filename,
+
+            size:
+                fs.statSync(
+                    filePath
+                ).size
+        });
+    }
+);
+
+
+// =========================================
+// HEALTH CHECK
+// =========================================
+
+app.get(
+    "/api/health",
+    (req, res) => {
+
+        res.json({
+
+            success: true,
+
+            server:
+                "running",
+
+            vcdn:
+                VCDN_API_KEY
+                    ? "READY"
+                    : "NOT CONFIGURED"
+        });
+    }
+);
+
+
+// =========================================
+// START SERVER
+// =========================================
+
+app.listen(
+    PORT,
+    HOST,
+    () => {
+
+        console.log("");
+
+        console.log(
+            "================================="
+        );
+
+        console.log(
+            "Video website server is running"
+        );
+
+        console.log(
+            `http://localhost:${PORT}`
+        );
+
+        console.log(
+            "VCDN integration:",
+            VCDN_API_KEY
+                ? "READY"
+                : "NOT CONFIGURED"
+        );
+
+        console.log(
+            "================================="
+        );
+    }
+);
