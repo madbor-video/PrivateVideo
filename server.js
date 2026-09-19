@@ -140,7 +140,6 @@ app.use(
 
 // =====================================================
 // OLD JSON DATABASE
-// Used only for first-time migration
 // =====================================================
 
 function readOldVideos() {
@@ -407,7 +406,8 @@ async function saveVideo(video) {
         ON CONFLICT (id)
         DO UPDATE SET
 
-            title = EXCLUDED.title,
+            title =
+                EXCLUDED.title,
 
             category =
                 EXCLUDED.category,
@@ -749,12 +749,14 @@ function makeVideoFromVcdn(
             vcdn.playback_ready === true,
 
         duration_sec:
-            vcdn.duration_sec ||
-            0,
+            Number(
+                vcdn.duration_sec || 0
+            ),
 
         size_bytes:
-            vcdn.size_bytes ||
-            0,
+            Number(
+                vcdn.size_bytes || 0
+            ),
 
         createdAt
     };
@@ -872,10 +874,12 @@ async function recoverVideosFromVCDN() {
     console.log(
         "VCDN RECOVERY FINISHED"
     );
+
     console.log(
         "VCDN VIDEOS RECOVERED:",
         recoveredCount
     );
+
     console.log(
         "================================="
     );
@@ -979,16 +983,63 @@ async function uploadVideoToVCDN(
         );
     }
 
+    // =================================================
+    // CHECK FILE
+    // =================================================
+
+    if (!filePath) {
+
+        throw new Error(
+            "Video file path missing"
+        );
+    }
+
+    if (!fs.existsSync(filePath)) {
+
+        throw new Error(
+            "Temporary video file not found"
+        );
+    }
+
+    const fileStats =
+        fs.statSync(filePath);
+
+    const fileSize =
+        Number(fileStats.size);
+
     console.log("");
     console.log(
         "================================="
     );
+
     console.log(
         "VCDN UPLOAD START"
     );
+
+    console.log(
+        "VIDEO FILE:",
+        originalName
+    );
+
+    console.log(
+        "VIDEO SIZE:",
+        fileSize,
+        "bytes"
+    );
+
     console.log(
         "================================="
     );
+
+    if (
+        !Number.isFinite(fileSize) ||
+        fileSize <= 0
+    ) {
+
+        throw new Error(
+            `Video file size is invalid: ${fileSize} bytes`
+        );
+    }
 
 
     // =================================================
@@ -1012,7 +1063,10 @@ async function uploadVideoToVCDN(
                             originalName,
 
                         title:
-                            title
+                            title,
+
+                        size:
+                            fileSize
                     })
             }
         );
@@ -1037,6 +1091,11 @@ async function uploadVideoToVCDN(
     console.log(
         "VCDN INIT STATUS:",
         initResponse.status
+    );
+
+    console.log(
+        "VCDN INIT RESPONSE:",
+        initText
     );
 
     if (!initResponse.ok) {
@@ -1073,6 +1132,16 @@ async function uploadVideoToVCDN(
             filePath
         );
 
+    if (
+        !fileBuffer ||
+        fileBuffer.length <= 0
+    ) {
+
+        throw new Error(
+            "Video file buffer is empty"
+        );
+    }
+
     const CHUNK_SIZE =
         10 * 1024 * 1024;
 
@@ -1096,6 +1165,16 @@ async function uploadVideoToVCDN(
                 offset,
                 end
             );
+
+        if (
+            !chunk ||
+            chunk.length <= 0
+        ) {
+
+            throw new Error(
+                "Video chunk is empty"
+            );
+        }
 
         const chunkResponse =
             await fetch(
@@ -1189,6 +1268,11 @@ async function uploadVideoToVCDN(
         completeResponse.status
     );
 
+    console.log(
+        "VCDN COMPLETE RESPONSE:",
+        completeText
+    );
+
     if (!completeResponse.ok) {
 
         throw new Error(
@@ -1201,6 +1285,13 @@ async function uploadVideoToVCDN(
         completeData.video_id ||
         completeData.videoId;
 
+    if (!videoId) {
+
+        throw new Error(
+            "VCDN video ID not found after upload"
+        );
+    }
+
     const playbackUrl =
         completeData.playback_url ||
         completeData.playbackUrl ||
@@ -1209,11 +1300,7 @@ async function uploadVideoToVCDN(
     const embedUrl =
         completeData.embed_url ||
         completeData.embedUrl ||
-        (
-            videoId
-                ? `https://embed.vcdn.me/${videoId}`
-                : ""
-        );
+        `https://embed.vcdn.me/${videoId}`;
 
     console.log(
         "VCDN VIDEO ID:",
@@ -1232,6 +1319,9 @@ async function uploadVideoToVCDN(
         embedUrl,
 
         playbackUrl,
+
+        size:
+            fileSize,
 
         raw:
             completeData
@@ -1281,9 +1371,11 @@ app.post(
             console.log(
                 "================================="
             );
+
             console.log(
                 "NEW VIDEO UPLOAD"
             );
+
             console.log(
                 "================================="
             );
@@ -1317,8 +1409,51 @@ app.post(
                 videoFile.path;
 
             if (thumbnailFile) {
+
                 thumbnailTempPath =
                     thumbnailFile.path;
+            }
+
+
+            // =================================================
+            // CHECK MULTER FILE SIZE
+            // =================================================
+
+            let actualVideoSize =
+                Number(
+                    videoFile.size || 0
+                );
+
+            if (
+                !actualVideoSize &&
+                videoTempPath &&
+                fs.existsSync(videoTempPath)
+            ) {
+
+                actualVideoSize =
+                    Number(
+                        fs.statSync(
+                            videoTempPath
+                        ).size
+                    );
+            }
+
+            console.log(
+                "MULTER VIDEO SIZE:",
+                actualVideoSize,
+                "bytes"
+            );
+
+            if (
+                !Number.isFinite(
+                    actualVideoSize
+                ) ||
+                actualVideoSize <= 0
+            ) {
+
+                throw new Error(
+                    `Uploaded video size is invalid: ${actualVideoSize} bytes`
+                );
             }
 
 
@@ -1329,7 +1464,7 @@ app.post(
             const vcdn =
                 await uploadVideoToVCDN(
 
-                    videoFile.path,
+                    videoTempPath,
 
                     videoFile.originalname,
 
@@ -1413,7 +1548,7 @@ app.post(
                     0,
 
                 size_bytes:
-                    videoFile.size,
+                    actualVideoSize,
 
                 createdAt:
                     new Date().toISOString()
@@ -1425,7 +1560,7 @@ app.post(
 
 
             // =================================================
-            // DELETE TEMP FILES
+            // DELETE TEMP VIDEO
             // =================================================
 
             try {
@@ -1442,7 +1577,20 @@ app.post(
                     );
                 }
 
-            } catch {}
+            } catch (
+                deleteVideoError
+            ) {
+
+                console.error(
+                    "TEMP VIDEO DELETE ERROR:",
+                    deleteVideoError.message
+                );
+            }
+
+
+            // =================================================
+            // DELETE TEMP THUMBNAIL
+            // =================================================
 
             try {
 
@@ -1458,11 +1606,19 @@ app.post(
                     );
                 }
 
-            } catch {}
+            } catch (
+                deleteThumbnailError
+            ) {
+
+                console.error(
+                    "TEMP THUMBNAIL DELETE ERROR:",
+                    deleteThumbnailError.message
+                );
+            }
 
 
             // =================================================
-            // ADD RUNTIME ID
+            // ADD RUNTIME VCDN ID
             // =================================================
 
             if (
@@ -1489,9 +1645,16 @@ app.post(
             );
 
             console.log(
+                "VIDEO SIZE:",
+                newVideo.size_bytes,
+                "bytes"
+            );
+
+            console.log(
                 "EMBED:",
                 newVideo.embed_url
             );
+
 
             return res.json({
 
@@ -1507,6 +1670,11 @@ app.post(
                 "UPLOAD ERROR:",
                 error
             );
+
+
+            // =================================================
+            // CLEAN VIDEO TEMP
+            // =================================================
 
             try {
 
@@ -1524,6 +1692,11 @@ app.post(
 
             } catch {}
 
+
+            // =================================================
+            // CLEAN THUMBNAIL TEMP
+            // =================================================
+
             try {
 
                 if (
@@ -1539,6 +1712,7 @@ app.post(
                 }
 
             } catch {}
+
 
             return res.status(500).json({
 
@@ -1803,17 +1977,20 @@ async function startServer() {
 
         await initDatabase();
 
+
         // -----------------------------------------------
         // OLD JSON → NEON
         // -----------------------------------------------
 
         await migrateOldJsonToNeon();
 
+
         // -----------------------------------------------
         // VCDN RECOVERY
         // -----------------------------------------------
 
         await recoverVideosFromVCDN();
+
 
         // -----------------------------------------------
         // START EXPRESS
@@ -1869,18 +2046,23 @@ async function startServer() {
     } catch (error) {
 
         console.error("");
+
         console.error(
             "================================="
         );
+
         console.error(
             "SERVER START ERROR"
         );
+
         console.error(
             "================================="
         );
+
         console.error(
             error.message
         );
+
         console.error(
             "================================="
         );
