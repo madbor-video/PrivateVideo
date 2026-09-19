@@ -1,18 +1,17 @@
 {
-"name": "privatevideo",
-"version": "1.0.0",
-"description": "Private Video Website",
-"main": "server.js",
-"scripts": {
-"start": "node server.js"
-},
-"keywords": [],
-"author": "",
-"license": "ISC",
-"type": "commonjs",
-"dependencies": {
-"express": "^5.2.1",
-"multer": "^2.4.0",
-"@vcdn/node": "latest"
-}
+  "name": "privatevideo",
+  "version": "1.0.0",
+  "description": "Private Video Website",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.4.0"
+  }
 }
