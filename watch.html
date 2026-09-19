@@ -1,62 +1,70 @@
 <!DOCTYPE html>
-
 <html lang="en">
 
 <head>
+
     <meta charset="UTF-8">
 
-```
-<meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
->
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
-<title>Watch Video - Private Video Hub</title>
+    <title>Watch Video - Private Video Hub</title>
 
-<link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css">
 
-<style>
-    .watch-player {
-        width: 100%;
-        aspect-ratio: 16 / 9;
-        background: #000;
-        overflow: hidden;
-        border-radius: 12px;
-    }
+    <style>
 
-    .watch-player iframe {
-        width: 100%;
-        height: 100%;
-        border: 0;
-        display: block;
-    }
+        .watch-player {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            overflow: hidden;
+            border-radius: 12px;
+        }
 
-    .watch-views {
-        margin-top: 10px;
-        font-size: 14px;
-        color: #999;
-    }
+        .watch-player iframe {
+            width: 100%;
+            height: 100%;
+            border: 0;
+            display: block;
+        }
 
-    .watch-views strong {
-        color: #fff;
-        font-weight: 600;
-    }
-</style>
-```
+        .watch-views {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #999;
+        }
+
+        .watch-views strong {
+            color: #fff;
+            font-weight: 600;
+        }
+
+    </style>
 
 </head>
 
 <body>
 
-```
 <!-- LOGIN PROTECTION -->
+
 <script>
-    if (sessionStorage.getItem("videoAuth") !== "true") {
+
+    if (
+        sessionStorage.getItem("videoAuth") !== "true"
+    ) {
+
         window.location.href = "login.html";
+
     }
+
 </script>
 
+
 <!-- HEADER -->
+
 <header class="top-header">
 
     <div class="logo">
@@ -74,11 +82,11 @@
 
 
 <!-- WATCH PAGE -->
+
 <main class="watch-main">
 
     <section class="watch-player-section">
 
-        <!-- VCDN PLAYER -->
         <div class="watch-player">
 
             <iframe
@@ -93,7 +101,6 @@
         </div>
 
 
-        <!-- VIDEO INFORMATION -->
         <div class="watch-info">
 
             <h1 id="watchTitle">
@@ -106,7 +113,13 @@
             ></div>
 
             <div class="watch-views">
-                <strong id="watchViews">0</strong> Views
+
+                <strong id="watchViews">
+                    0
+                </strong>
+
+                Views
+
             </div>
 
         </div>
@@ -115,6 +128,7 @@
 
 
     <!-- RELATED VIDEOS -->
+
     <section class="related-section">
 
         <div class="related-heading">
@@ -140,6 +154,7 @@
 
 
 <!-- FOOTER -->
+
 <footer>
 
     <div class="footer-logo">
@@ -160,62 +175,93 @@
 <script>
 
     const videoFrame =
-        document.getElementById("mainVideoFrame");
+        document.getElementById(
+            "mainVideoFrame"
+        );
+
 
     let allVideos = [];
 
     let currentVideo = null;
 
 
-    /* ================================
+    /* =====================================
        HOME
-    ================================= */
+    ===================================== */
 
     function goHome() {
 
-        window.location.href = "index.html";
+        window.location.href =
+            "index.html";
 
     }
 
 
-    /* ================================
-       DISPLAY VIEW COUNT
-    ================================= */
+    /* =====================================
+       VIEWS
+    ===================================== */
 
     function getDisplayViews(videoId) {
 
         let hash = 0;
 
         const text =
-            String(videoId || "video");
+            String(
+                videoId || "video"
+            );
 
-        for (let i = 0; i < text.length; i++) {
+
+        for (
+            let i = 0;
+            i < text.length;
+            i++
+        ) {
 
             hash =
-                ((hash << 5) - hash) +
+                (
+                    (hash << 5) -
+                    hash
+                ) +
                 text.charCodeAt(i);
 
             hash |= 0;
 
         }
 
-        hash = Math.abs(hash);
 
-        const min = 30000000;
-        const max = 45000000;
+        hash =
+            Math.abs(hash);
+
+
+        const min =
+            30000000;
+
+        const max =
+            45000000;
+
 
         const views =
             min +
-            (hash % (max - min + 1));
+            (
+                hash %
+                (
+                    max -
+                    min +
+                    1
+                )
+            );
 
-        return formatViews(views);
+
+        return formatViews(
+            views
+        );
 
     }
 
 
-    /* ================================
+    /* =====================================
        FORMAT VIEWS
-    ================================= */
+    ===================================== */
 
     function formatViews(number) {
 
@@ -230,6 +276,7 @@
 
         }
 
+
         if (number >= 1000) {
 
             return (
@@ -241,21 +288,84 @@
 
         }
 
+
         return String(number);
 
     }
 
 
-    /* ================================
+    /* =====================================
+       CREATE VCDN URL
+    ===================================== */
+
+    function createVcdnUrl(video) {
+
+        /*
+         * সবসময় vcdn_id-কে priority দেওয়া হচ্ছে।
+         *
+         * Correct VCDN format:
+         *
+         * https://embed.vcdn.me/VIDEO_ID
+         *
+         * Wrong old format:
+         *
+         * https://embed.vcdn.me/embed/VIDEO_ID
+         */
+
+
+        if (video.vcdn_id) {
+
+            return (
+                "https://embed.vcdn.me/" +
+                video.vcdn_id
+            );
+
+        }
+
+
+        let url =
+            video.embed_url ||
+            video.embedUrl ||
+            video.video ||
+            "";
+
+
+        if (
+            url.includes(
+                "https://embed.vcdn.me/embed/"
+            )
+        ) {
+
+            url =
+                url.replace(
+                    "https://embed.vcdn.me/embed/",
+                    "https://embed.vcdn.me/"
+                );
+
+        }
+
+
+        return url;
+
+    }
+
+
+    /* =====================================
        LOAD VIDEOS
-    ================================= */
+    ===================================== */
 
     async function loadVideos() {
 
         try {
 
             const response =
-                await fetch("/api/videos");
+                await fetch(
+                    "/api/videos",
+                    {
+                        cache: "no-store"
+                    }
+                );
+
 
             if (!response.ok) {
 
@@ -265,88 +375,59 @@
 
             }
 
+
             const serverVideos =
                 await response.json();
 
 
             allVideos =
-                serverVideos.map(video => {
+                serverVideos.map(
+                    video => {
 
-                    let embedUrl =
-                        video.embed_url ||
-                        video.embedUrl ||
-                        "";
+                        return {
 
+                            id:
+                                "uploaded-" +
+                                video.id,
 
-                    /*
-                     * FIX OLD VCDN URL
-                     *
-                     * Old:
-                     * https://embed.vcdn.me/embed/VIDEO_ID
-                     *
-                     * Correct:
-                     * https://embed.vcdn.me/VIDEO_ID
-                     */
+                            title:
+                                video.title ||
+                                "Untitled Video",
 
-                    if (
-                        embedUrl.includes(
-                            "https://embed.vcdn.me/embed/"
-                        )
-                    ) {
+                            category:
+                                video.category ||
+                                "",
 
-                        embedUrl =
-                            embedUrl.replace(
-                                "https://embed.vcdn.me/embed/",
-                                "https://embed.vcdn.me/"
-                            );
+                            thumbnail:
+                                video.thumbnail ||
+                                "",
 
-                    }
+                            videoUrl:
+                                video.video ||
+                                "",
 
+                            embedUrl:
+                                createVcdnUrl(
+                                    video
+                                ),
 
-                    /*
-                     * CREATE VCDN URL
-                     * IF DATABASE URL IS EMPTY
-                     */
+                            vcdnId:
+                                video.vcdn_id ||
+                                "",
 
-                    if (
-                        !embedUrl &&
-                        video.vcdn_id
-                    ) {
+                            uploaded:
+                                true
 
-                        embedUrl =
-                            "https://embed.vcdn.me/" +
-                            video.vcdn_id;
+                        };
 
                     }
+                );
 
 
-                    return {
-
-                        id:
-                            "uploaded-" +
-                            video.id,
-
-                        title:
-                            video.title || "",
-
-                        category:
-                            video.category || "",
-
-                        thumbnail:
-                            video.thumbnail || "",
-
-                        videoUrl:
-                            video.video || "",
-
-                        embedUrl:
-                            embedUrl,
-
-                        uploaded:
-                            true
-
-                    };
-
-                });
+            console.log(
+                "Loaded videos:",
+                allVideos
+            );
 
 
             openCurrentVideo();
@@ -359,6 +440,7 @@
                 error
             );
 
+
             document.getElementById(
                 "watchTitle"
             ).textContent =
@@ -369,9 +451,9 @@
     }
 
 
-    /* ================================
+    /* =====================================
        OPEN CURRENT VIDEO
-    ================================= */
+    ===================================== */
 
     function openCurrentVideo() {
 
@@ -383,6 +465,12 @@
 
         const videoId =
             params.get("id");
+
+
+        console.log(
+            "Requested video ID:",
+            videoId
+        );
 
 
         if (!videoId) {
@@ -404,6 +492,12 @@
             );
 
 
+        console.log(
+            "Current video:",
+            currentVideo
+        );
+
+
         if (!currentVideo) {
 
             document.getElementById(
@@ -416,42 +510,45 @@
         }
 
 
-        /* ================================
+        /* =================================
            VCDN PLAYER
         ================================= */
 
-        if (currentVideo.embedUrl) {
 
-            console.log(
-                "VCDN Player URL:",
-                currentVideo.embedUrl
-            );
+        const playerUrl =
+            currentVideo.embedUrl;
 
 
-            videoFrame.src =
-                currentVideo.embedUrl;
+        console.log(
+            "FINAL VCDN PLAYER URL:",
+            playerUrl
+        );
 
-        }
-        else {
+
+        if (!playerUrl) {
 
             document.getElementById(
                 "watchTitle"
             ).textContent =
                 "VCDN player URL not found.";
 
-            console.error(
-                "No VCDN player URL found:",
-                currentVideo
-            );
-
             return;
 
         }
 
 
-        /* ================================
+        /*
+         * iframe-এ শুধু correct VCDN URL যাবে।
+         */
+
+        videoFrame.src =
+            playerUrl;
+
+
+        /* =================================
            VIDEO INFORMATION
         ================================= */
+
 
         document.getElementById(
             "watchTitle"
@@ -483,9 +580,9 @@
     }
 
 
-    /* ================================
+    /* =====================================
        RELATED VIDEOS
-    ================================= */
+    ===================================== */
 
     function renderRelatedVideos() {
 
@@ -495,8 +592,13 @@
             );
 
 
-        if (!grid || !currentVideo) {
+        if (
+            !grid ||
+            !currentVideo
+        ) {
+
             return;
+
         }
 
 
@@ -507,22 +609,31 @@
             allVideos.filter(
                 video =>
                     video.category ===
-                    currentVideo.category &&
+                        currentVideo.category &&
                     video.id !==
-                    currentVideo.id
+                        currentVideo.id
             );
 
 
         related =
-            related.slice(0, 12);
+            related.slice(
+                0,
+                12
+            );
 
 
-        if (related.length === 0) {
+        if (
+            related.length === 0
+        ) {
 
             grid.innerHTML = `
+
                 <div class="no-related">
+
                     No related videos available yet.
+
                 </div>
+
             `;
 
             return;
@@ -530,108 +641,114 @@
         }
 
 
-        related.forEach(video => {
+        related.forEach(
+            video => {
 
-            const card =
-                document.createElement("div");
-
-
-            card.className =
-                "video-card";
-
-
-            const thumbnail =
-                video.thumbnail
-                    ? escapeHTML(
-                        video.thumbnail
-                    )
-                    : "";
+                const card =
+                    document.createElement(
+                        "div"
+                    );
 
 
-            card.innerHTML = `
+                card.className =
+                    "video-card";
 
-                <div class="thumbnail-wrap">
 
-                    ${
-                        thumbnail
-                        ?
-                        `
-                        <img
-                            class="thumbnail"
-                            src="${thumbnail}"
-                            loading="lazy"
-                            alt="${escapeHTML(
-                                video.title
-                            )}"
-                        >
-                        `
-                        :
-                        `
-                        <div
-                            class="thumbnail"
-                            style="
-                                display:flex;
-                                align-items:center;
-                                justify-content:center;
-                                background:#111;
-                                color:#fff;
-                                font-size:40px;
-                            "
-                        >
+                const thumbnail =
+                    video.thumbnail
+                        ? escapeHTML(
+                            video.thumbnail
+                        )
+                        : "";
+
+
+                card.innerHTML = `
+
+                    <div class="thumbnail-wrap">
+
+                        ${
+                            thumbnail
+                            ?
+                            `
+                            <img
+                                class="thumbnail"
+                                src="${thumbnail}"
+                                loading="lazy"
+                                alt="${escapeHTML(
+                                    video.title
+                                )}"
+                            >
+                            `
+                            :
+                            `
+                            <div
+                                class="thumbnail"
+                                style="
+                                    display:flex;
+                                    align-items:center;
+                                    justify-content:center;
+                                    background:#111;
+                                    color:#fff;
+                                    font-size:40px;
+                                "
+                            >
+                                ▶
+                            </div>
+                            `
+                        }
+
+                        <div class="play-button">
                             ▶
                         </div>
-                        `
-                    }
 
-                    <div class="play-button">
-                        ▶
-                    </div>
-
-                </div>
-
-
-                <div class="card-body">
-
-                    <div class="video-title">
-                        ${escapeHTML(
-                            video.title
-                        )}
                     </div>
 
 
-                    <div class="video-category">
-                        ${escapeHTML(
-                            video.category
-                        )}
+                    <div class="card-body">
+
+                        <div class="video-title">
+                            ${escapeHTML(
+                                video.title
+                            )}
+                        </div>
+
+
+                        <div class="video-category">
+                            ${escapeHTML(
+                                video.category
+                            )}
+                        </div>
+
                     </div>
 
-                </div>
-
-            `;
+                `;
 
 
-            card.onclick =
-                function () {
+                card.onclick =
+                    function () {
 
-                    window.location.href =
-                        "watch.html?id=" +
-                        encodeURIComponent(
-                            video.id
-                        );
+                        window.location.href =
+                            "watch.html?id=" +
+                            encodeURIComponent(
+                                video.id
+                            );
 
-                };
+                    };
 
 
-            grid.appendChild(card);
+                grid.appendChild(
+                    card
+                );
 
-        });
+            }
+        );
 
     }
 
 
-    /* ================================
+    /* =====================================
        HTML ESCAPE
-    ================================= */
+    ===================================== */
 
     function escapeHTML(value) {
 
@@ -665,15 +782,15 @@
     }
 
 
-    /* ================================
+    /* =====================================
        START
-    ================================= */
+    ===================================== */
 
     loadVideos();
 
 </script>
-```
 
 </body>
 
 </html>
+
