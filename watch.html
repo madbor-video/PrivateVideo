@@ -87,7 +87,7 @@
                 title="Video Player"
                 allow="autoplay; fullscreen; picture-in-picture"
                 allowfullscreen
-                referrerpolicy="no-referrer"
+                referrerpolicy="strict-origin-when-cross-origin"
             ></iframe>
 
         </div>
@@ -147,8 +147,7 @@
     </div>
 
     <p>
-        Japanese, English, Bangladesh and Indian
-        video collections in one private-style gallery.
+        Private video collection.
     </p>
 
     <p class="copyright">
@@ -185,16 +184,10 @@
 
     function getDisplayViews(videoId) {
 
-        /*
-         * Display-only view count.
-         * This does NOT change real VCDN views.
-         *
-         * Same video ID = same number every time.
-         */
-
         let hash = 0;
 
-        const text = String(videoId || "video");
+        const text =
+            String(videoId || "video");
 
         for (let i = 0; i < text.length; i++) {
 
@@ -203,14 +196,10 @@
                 text.charCodeAt(i);
 
             hash |= 0;
+
         }
 
         hash = Math.abs(hash);
-
-        /*
-         * Creates a number between
-         * 30M and 45M.
-         */
 
         const min = 30000000;
         const max = 45000000;
@@ -290,7 +279,13 @@
 
 
                     /*
-                     * VCDN EMBED URL
+                     * FIX OLD VCDN URL
+                     *
+                     * Old:
+                     * https://embed.vcdn.me/embed/VIDEO_ID
+                     *
+                     * Correct:
+                     * https://embed.vcdn.me/VIDEO_ID
                      */
 
                     if (
@@ -309,8 +304,8 @@
 
 
                     /*
-                     * If embed URL is missing,
-                     * create it from VCDN ID.
+                     * CREATE VCDN URL
+                     * IF DATABASE URL IS EMPTY
                      */
 
                     if (
@@ -428,7 +423,7 @@
         if (currentVideo.embedUrl) {
 
             console.log(
-                "VCDN Embed URL:",
+                "VCDN Player URL:",
                 currentVideo.embedUrl
             );
 
@@ -442,10 +437,10 @@
             document.getElementById(
                 "watchTitle"
             ).textContent =
-                "VCDN embed URL not found.";
+                "VCDN player URL not found.";
 
             console.error(
-                "No VCDN embed URL found:",
+                "No VCDN player URL found:",
                 currentVideo
             );
 
@@ -469,10 +464,6 @@
         ).textContent =
             currentVideo.category;
 
-
-        /*
-         * Display-only view count
-         */
 
         document.getElementById(
             "watchViews"
@@ -502,6 +493,11 @@
             document.getElementById(
                 "relatedGrid"
             );
+
+
+        if (!grid || !currentVideo) {
+            return;
+        }
 
 
         grid.innerHTML = "";
