@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { Pool } = require("pg");
 
 const app = express();
@@ -19,6 +20,38 @@ const ADMIN_PASSWORD =
     process.env.ADMIN_PASSWORD || "CHANGE_THIS_PASSWORD";
 
 // =====================================================
+// ADMIN SESSIONS
+// =====================================================
+
+const adminSessions = new Set();
+
+function createAdminToken() {
+    return crypto.randomBytes(32).toString("hex");
+}
+
+function requireAdmin(req, res, next) {
+
+    const token =
+        req.headers["x-admin-token"];
+
+    if (
+        !token ||
+        !adminSessions.has(token)
+    ) {
+
+        return res.status(401).json({
+
+            success: false,
+
+            message:
+                "Admin authentication required"
+        });
+    }
+
+    next();
+}
+
+// =====================================================
 // NEON DATABASE
 // =====================================================
 
@@ -26,18 +59,24 @@ const DATABASE_URL =
     process.env.DATABASE_URL || "";
 
 if (!DATABASE_URL) {
-    console.error("DATABASE_URL is missing");
+
+    console.error(
+        "DATABASE_URL is missing"
+    );
 }
 
-const pool = DATABASE_URL
-    ? new Pool({
-        connectionString: DATABASE_URL,
-        ssl: {
-            rejectUnauthorized: false
-        }
-    })
-    : null;
+const pool =
+    DATABASE_URL
+        ? new Pool({
 
+            connectionString:
+                DATABASE_URL,
+
+            ssl: {
+                rejectUnauthorized: false
+            }
+        })
+        : null;
 
 // =====================================================
 // VCDN
@@ -52,7 +91,6 @@ const VCDN_PROJECT_ID =
 
 const VCDN_BASE_URL =
     "https://cdn.vcdn.me";
-
 
 // =====================================================
 // KNOWN VCDN VIDEOS
@@ -76,35 +114,56 @@ const KNOWN_VCDN_VIDEO_IDS = [
 
 ];
 
-
 // =====================================================
 // LOCAL DIRECTORIES
 // =====================================================
 
 const DATA_DIR =
-    path.join(__dirname, "data");
+    path.join(
+        __dirname,
+        "data"
+    );
 
 const THUMB_DIR =
-    path.join(__dirname, "uploads", "thumbnails");
+    path.join(
+        __dirname,
+        "uploads",
+        "thumbnails"
+    );
 
 const TMP_DIR =
-    path.join(__dirname, "uploads", "tmp");
+    path.join(
+        __dirname,
+        "uploads",
+        "tmp"
+    );
 
 const DB_FILE =
-    path.join(DATA_DIR, "videos.json");
+    path.join(
+        DATA_DIR,
+        "videos.json"
+    );
 
-fs.mkdirSync(DATA_DIR, {
-    recursive: true
-});
+fs.mkdirSync(
+    DATA_DIR,
+    {
+        recursive: true
+    }
+);
 
-fs.mkdirSync(THUMB_DIR, {
-    recursive: true
-});
+fs.mkdirSync(
+    THUMB_DIR,
+    {
+        recursive: true
+    }
+);
 
-fs.mkdirSync(TMP_DIR, {
-    recursive: true
-});
-
+fs.mkdirSync(
+    TMP_DIR,
+    {
+        recursive: true
+    }
+);
 
 // =====================================================
 // MULTER
@@ -112,9 +171,10 @@ fs.mkdirSync(TMP_DIR, {
 
 const upload =
     multer({
-        dest: TMP_DIR
-    });
 
+        dest:
+            TMP_DIR
+    });
 
 // =====================================================
 // EXPRESS
@@ -128,15 +188,18 @@ app.use(
 
 app.use(
     express.urlencoded({
+
         extended: true,
+
         limit: "50mb"
     })
 );
 
 app.use(
-    express.static(__dirname)
+    express.static(
+        __dirname
+    )
 );
-
 
 // =====================================================
 // OLD JSON DATABASE
@@ -146,7 +209,12 @@ function readOldVideos() {
 
     try {
 
-        if (!fs.existsSync(DB_FILE)) {
+        if (
+            !fs.existsSync(
+                DB_FILE
+            )
+        ) {
+
             return [];
         }
 
@@ -156,14 +224,24 @@ function readOldVideos() {
                 "utf8"
             );
 
-        if (!text.trim()) {
+        if (
+            !text.trim()
+        ) {
+
             return [];
         }
 
         const data =
-            JSON.parse(text);
+            JSON.parse(
+                text
+            );
 
-        if (!Array.isArray(data)) {
+        if (
+            !Array.isArray(
+                data
+            )
+        ) {
+
             return [];
         }
 
@@ -180,7 +258,6 @@ function readOldVideos() {
     }
 }
 
-
 // =====================================================
 // NEON DATABASE INIT
 // =====================================================
@@ -188,35 +265,52 @@ function readOldVideos() {
 async function initDatabase() {
 
     if (!pool) {
+
         throw new Error(
             "DATABASE_URL is missing"
         );
     }
 
     await pool.query(`
+
         CREATE TABLE IF NOT EXISTS videos (
+
             id TEXT PRIMARY KEY,
+
             title TEXT NOT NULL,
+
             category TEXT DEFAULT 'Uncategorized',
+
             thumbnail TEXT DEFAULT '',
+
             video TEXT DEFAULT '',
+
             video_url TEXT DEFAULT '',
+
             embed_url TEXT DEFAULT '',
+
             playback_url TEXT DEFAULT '',
+
             vcdn_id TEXT DEFAULT '',
+
             vcdn_status TEXT DEFAULT '',
+
             playback_ready BOOLEAN DEFAULT FALSE,
+
             duration_sec DOUBLE PRECISION DEFAULT 0,
+
             size_bytes BIGINT DEFAULT 0,
+
             created_at TIMESTAMPTZ DEFAULT NOW()
+
         )
+
     `);
 
     console.log(
         "NEON DATABASE: READY"
     );
 }
-
 
 // =====================================================
 // CONVERT DB ROW TO WEBSITE OBJECT
@@ -298,7 +392,6 @@ function rowToVideo(row) {
     };
 }
 
-
 // =====================================================
 // GET ALL VIDEOS FROM NEON
 // =====================================================
@@ -306,21 +399,25 @@ function rowToVideo(row) {
 async function getAllVideos() {
 
     if (!pool) {
+
         return [];
     }
 
     const result =
         await pool.query(`
+
             SELECT *
+
             FROM videos
+
             ORDER BY created_at DESC
+
         `);
 
     return result.rows.map(
         rowToVideo
     );
 }
-
 
 // =====================================================
 // GET ONE VIDEO FROM NEON
@@ -329,23 +426,34 @@ async function getAllVideos() {
 async function getVideoById(id) {
 
     if (!pool) {
+
         return null;
     }
 
     const result =
         await pool.query(
+
             `
+
             SELECT *
+
             FROM videos
+
             WHERE id = $1
+
             LIMIT 1
+
             `,
-            [String(id)]
+
+            [
+                String(id)
+            ]
         );
 
     if (
         result.rows.length === 0
     ) {
+
         return null;
     }
 
@@ -354,7 +462,6 @@ async function getVideoById(id) {
     );
 }
 
-
 // =====================================================
 // SAVE VIDEO TO NEON
 // =====================================================
@@ -362,48 +469,82 @@ async function getVideoById(id) {
 async function saveVideo(video) {
 
     if (!pool) {
+
         throw new Error(
             "DATABASE_URL is missing"
         );
     }
 
     await pool.query(
+
         `
+
         INSERT INTO videos (
+
             id,
+
             title,
+
             category,
+
             thumbnail,
+
             video,
+
             video_url,
+
             embed_url,
+
             playback_url,
+
             vcdn_id,
+
             vcdn_status,
+
             playback_ready,
+
             duration_sec,
+
             size_bytes,
+
             created_at
+
         )
 
         VALUES (
+
             $1,
+
             $2,
+
             $3,
+
             $4,
+
             $5,
+
             $6,
+
             $7,
+
             $8,
+
             $9,
+
             $10,
+
             $11,
+
             $12,
+
             $13,
+
             $14
+
         )
 
         ON CONFLICT (id)
+
         DO UPDATE SET
 
             title =
@@ -441,11 +582,14 @@ async function saveVideo(video) {
 
             size_bytes =
                 EXCLUDED.size_bytes
+
         `,
 
         [
 
-            String(video.id),
+            String(
+                video.id
+            ),
 
             video.title ||
                 "Untitled Video",
@@ -492,10 +636,10 @@ async function saveVideo(video) {
                     video.createdAt
                 )
                 : new Date()
+
         ]
     );
 }
-
 
 // =====================================================
 // DELETE VIDEO FROM NEON
@@ -504,20 +648,27 @@ async function saveVideo(video) {
 async function deleteVideoFromDatabase(id) {
 
     if (!pool) {
+
         throw new Error(
             "DATABASE_URL is missing"
         );
     }
 
     await pool.query(
+
         `
+
         DELETE FROM videos
+
         WHERE id = $1
+
         `,
-        [String(id)]
+
+        [
+            String(id)
+        ]
     );
 }
-
 
 // =====================================================
 // MIGRATE OLD JSON TO NEON
@@ -526,6 +677,7 @@ async function deleteVideoFromDatabase(id) {
 async function migrateOldJsonToNeon() {
 
     if (!pool) {
+
         return;
     }
 
@@ -580,7 +732,6 @@ async function migrateOldJsonToNeon() {
     );
 }
 
-
 // =====================================================
 // VCDN HEADERS
 // =====================================================
@@ -600,7 +751,6 @@ function vcdnHeaders() {
     };
 }
 
-
 // =====================================================
 // GET ONE VCDN VIDEO
 // =====================================================
@@ -616,10 +766,16 @@ async function getVcdnVideo(videoId) {
 
     const response =
         await fetch(
+
             `${VCDN_BASE_URL}/api/v1/videos/${videoId}`,
+
             {
-                method: "GET",
-                headers: vcdnHeaders()
+
+                method:
+                    "GET",
+
+                headers:
+                    vcdnHeaders()
             }
         );
 
@@ -631,7 +787,9 @@ async function getVcdnVideo(videoId) {
     try {
 
         data =
-            JSON.parse(text);
+            JSON.parse(
+                text
+            );
 
     } catch {
 
@@ -643,14 +801,15 @@ async function getVcdnVideo(videoId) {
         response.status
     );
 
-    if (!response.ok) {
+    if (
+        !response.ok
+    ) {
 
         return null;
     }
 
     return data;
 }
-
 
 // =====================================================
 // MAKE WEBSITE VIDEO FROM VCDN
@@ -662,6 +821,7 @@ function makeVideoFromVcdn(
 ) {
 
     if (!vcdn) {
+
         return null;
     }
 
@@ -671,6 +831,7 @@ function makeVideoFromVcdn(
         vcdn.videoId;
 
     if (!videoId) {
+
         return null;
     }
 
@@ -762,7 +923,6 @@ function makeVideoFromVcdn(
     };
 }
 
-
 // =====================================================
 // RECOVER VIDEOS FROM VCDN
 // =====================================================
@@ -770,12 +930,15 @@ function makeVideoFromVcdn(
 async function recoverVideosFromVCDN() {
 
     console.log("");
+
     console.log(
         "================================="
     );
+
     console.log(
         "VCDN VIDEO RECOVERY STARTING"
     );
+
     console.log(
         "================================="
     );
@@ -807,13 +970,18 @@ async function recoverVideosFromVCDN() {
                 );
 
             if (!vcdn) {
+
                 continue;
             }
 
             if (
                 vcdn.project_id &&
-                String(vcdn.project_id) !==
-                String(VCDN_PROJECT_ID)
+                String(
+                    vcdn.project_id
+                ) !==
+                String(
+                    VCDN_PROJECT_ID
+                )
             ) {
 
                 console.log(
@@ -826,12 +994,16 @@ async function recoverVideosFromVCDN() {
 
             const oldVideo =
                 oldVideos.find(
+
                     item =>
+
                         String(
                             item.vcdn_id ||
                             item.vcdnId
                         ) ===
-                        String(videoId)
+                        String(
+                            videoId
+                        )
                 );
 
             const websiteVideo =
@@ -841,6 +1013,7 @@ async function recoverVideosFromVCDN() {
                 );
 
             if (!websiteVideo) {
+
                 continue;
             }
 
@@ -871,6 +1044,7 @@ async function recoverVideosFromVCDN() {
     }
 
     console.log("");
+
     console.log(
         "VCDN RECOVERY FINISHED"
     );
@@ -885,20 +1059,24 @@ async function recoverVideosFromVCDN() {
     );
 }
 
-
 // =====================================================
-// LOGIN
+// ADMIN LOGIN
 // =====================================================
 
 app.post(
-    "/api/login",
+    "/api/admin-login",
 
     (req, res) => {
 
-        const {
-            username,
-            password
-        } = req.body;
+        const username =
+            String(
+                req.body.username || ""
+            ).trim();
+
+        const password =
+            String(
+                req.body.password || ""
+            );
 
         if (
             username ===
@@ -908,14 +1086,27 @@ app.post(
             ADMIN_PASSWORD
         ) {
 
+            const token =
+                createAdminToken();
+
+            adminSessions.add(
+                token
+            );
+
             return res.json({
-                success: true
+
+                success:
+                    true,
+
+                token:
+                    token
             });
         }
 
         return res.status(401).json({
 
-            success: false,
+            success:
+                false,
 
             message:
                 "Invalid username or password"
@@ -923,6 +1114,89 @@ app.post(
     }
 );
 
+// =====================================================
+// ADMIN LOGOUT
+// =====================================================
+
+app.post(
+    "/api/admin-logout",
+
+    (req, res) => {
+
+        const token =
+            req.headers[
+                "x-admin-token"
+            ];
+
+        if (token) {
+
+            adminSessions.delete(
+                token
+            );
+        }
+
+        return res.json({
+
+            success:
+                true
+        });
+    }
+);
+
+// =====================================================
+// OLD LOGIN COMPATIBILITY
+// =====================================================
+
+app.post(
+    "/api/login",
+
+    (req, res) => {
+
+        const username =
+            String(
+                req.body.username || ""
+            ).trim();
+
+        const password =
+            String(
+                req.body.password || ""
+            );
+
+        if (
+            username ===
+            ADMIN_USERNAME &&
+
+            password ===
+            ADMIN_PASSWORD
+        ) {
+
+            const token =
+                createAdminToken();
+
+            adminSessions.add(
+                token
+            );
+
+            return res.json({
+
+                success:
+                    true,
+
+                token:
+                    token
+            });
+        }
+
+        return res.status(401).json({
+
+            success:
+                false,
+
+            message:
+                "Invalid username or password"
+        });
+    }
+);
 
 // =====================================================
 // GET VIDEOS
@@ -956,7 +1230,8 @@ app.get(
 
             return res.status(500).json({
 
-                success: false,
+                success:
+                    false,
 
                 message:
                     "Failed to load videos"
@@ -964,7 +1239,6 @@ app.get(
         }
     }
 );
-
 
 // =====================================================
 // VCDN UPLOAD
@@ -983,10 +1257,6 @@ async function uploadVideoToVCDN(
         );
     }
 
-    // =================================================
-    // CHECK FILE
-    // =================================================
-
     if (!filePath) {
 
         throw new Error(
@@ -994,7 +1264,11 @@ async function uploadVideoToVCDN(
         );
     }
 
-    if (!fs.existsSync(filePath)) {
+    if (
+        !fs.existsSync(
+            filePath
+        )
+    ) {
 
         throw new Error(
             "Temporary video file not found"
@@ -1002,12 +1276,17 @@ async function uploadVideoToVCDN(
     }
 
     const fileStats =
-        fs.statSync(filePath);
+        fs.statSync(
+            filePath
+        );
 
     const fileSize =
-        Number(fileStats.size);
+        Number(
+            fileStats.size
+        );
 
     console.log("");
+
     console.log(
         "================================="
     );
@@ -1032,7 +1311,9 @@ async function uploadVideoToVCDN(
     );
 
     if (
-        !Number.isFinite(fileSize) ||
+        !Number.isFinite(
+            fileSize
+        ) ||
         fileSize <= 0
     ) {
 
@@ -1041,17 +1322,19 @@ async function uploadVideoToVCDN(
         );
     }
 
-
     // =================================================
     // INIT
     // =================================================
 
     const initResponse =
         await fetch(
+
             `${VCDN_BASE_URL}/api/v1/upload/init`,
+
             {
 
-                method: "POST",
+                method:
+                    "POST",
 
                 headers:
                     vcdnHeaders(),
@@ -1098,10 +1381,14 @@ async function uploadVideoToVCDN(
         initText
     );
 
-    if (!initResponse.ok) {
+    if (
+        !initResponse.ok
+    ) {
 
         throw new Error(
+
             `VCDN init failed: ${initResponse.status} ${initText}`
+
         );
     }
 
@@ -1121,7 +1408,6 @@ async function uploadVideoToVCDN(
         "VCDN UPLOAD ID:",
         uploadId
     );
-
 
     // =================================================
     // READ FILE
@@ -1154,10 +1440,12 @@ async function uploadVideoToVCDN(
 
         const end =
             Math.min(
+
                 offset +
                 CHUNK_SIZE,
 
                 fileBuffer.length
+
             );
 
         const chunk =
@@ -1183,7 +1471,8 @@ async function uploadVideoToVCDN(
 
                 {
 
-                    method: "POST",
+                    method:
+                        "POST",
 
                     headers: {
 
@@ -1206,20 +1495,25 @@ async function uploadVideoToVCDN(
             await chunkResponse.text();
 
         console.log(
+
             `VCDN CHUNK: ${end}/${fileBuffer.length} STATUS ${chunkResponse.status}`
+
         );
 
-        if (!chunkResponse.ok) {
+        if (
+            !chunkResponse.ok
+        ) {
 
             throw new Error(
+
                 `VCDN chunk failed: ${chunkResponse.status} ${chunkText}`
+
             );
         }
 
         offset =
             end;
     }
-
 
     // =================================================
     // COMPLETE
@@ -1232,7 +1526,8 @@ async function uploadVideoToVCDN(
 
             {
 
-                method: "POST",
+                method:
+                    "POST",
 
                 headers:
                     vcdnHeaders(),
@@ -1273,10 +1568,14 @@ async function uploadVideoToVCDN(
         completeText
     );
 
-    if (!completeResponse.ok) {
+    if (
+        !completeResponse.ok
+    ) {
 
         throw new Error(
+
             `VCDN complete failed: ${completeResponse.status} ${completeText}`
+
         );
     }
 
@@ -1328,7 +1627,6 @@ async function uploadVideoToVCDN(
     };
 }
 
-
 // =====================================================
 // UPLOAD ROUTE
 // =====================================================
@@ -1337,9 +1635,12 @@ app.post(
 
     "/api/upload",
 
+    requireAdmin,
+
     upload.fields([
 
         {
+
             name:
                 "video1",
 
@@ -1348,6 +1649,7 @@ app.post(
         },
 
         {
+
             name:
                 "thumbnail1",
 
@@ -1368,6 +1670,7 @@ app.post(
         try {
 
             console.log("");
+
             console.log(
                 "================================="
             );
@@ -1381,10 +1684,12 @@ app.post(
             );
 
             const title =
+                req.body.title ||
                 req.body.title1 ||
                 "Untitled Video";
 
             const category =
+                req.body.category ||
                 req.body.category1 ||
                 "Uncategorized";
 
@@ -1398,7 +1703,8 @@ app.post(
 
                 return res.status(400).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "Video file missing"
@@ -1414,7 +1720,6 @@ app.post(
                     thumbnailFile.path;
             }
 
-
             // =================================================
             // CHECK MULTER FILE SIZE
             // =================================================
@@ -1427,14 +1732,18 @@ app.post(
             if (
                 !actualVideoSize &&
                 videoTempPath &&
-                fs.existsSync(videoTempPath)
+                fs.existsSync(
+                    videoTempPath
+                )
             ) {
 
                 actualVideoSize =
                     Number(
+
                         fs.statSync(
                             videoTempPath
                         ).size
+
                     );
             }
 
@@ -1452,10 +1761,11 @@ app.post(
             ) {
 
                 throw new Error(
+
                     `Uploaded video size is invalid: ${actualVideoSize} bytes`
+
                 );
             }
-
 
             // =================================================
             // UPLOAD VIDEO TO VCDN
@@ -1469,8 +1779,8 @@ app.post(
                     videoFile.originalname,
 
                     title
-                );
 
+                );
 
             // =================================================
             // THUMBNAIL
@@ -1481,24 +1791,34 @@ app.post(
 
             if (thumbnailFile) {
 
+                const safeOriginalName =
+                    path.basename(
+                        thumbnailFile.originalname
+                    );
+
                 const filename =
-                    `${Date.now()}-${thumbnailFile.originalname}`;
+                    `${Date.now()}-${safeOriginalName}`;
 
                 const destination =
                     path.join(
+
                         THUMB_DIR,
+
                         filename
+
                     );
 
                 fs.copyFileSync(
+
                     thumbnailFile.path,
+
                     destination
+
                 );
 
                 thumbnailUrl =
                     `/uploads/thumbnails/${filename}`;
             }
-
 
             // =================================================
             // SAVE TO NEON
@@ -1516,9 +1836,11 @@ app.post(
                 thumbnail:
                     thumbnailUrl,
 
-                video: "",
+                video:
+                    "",
 
-                videoUrl: "",
+                videoUrl:
+                    "",
 
                 embed_url:
                     vcdn.embedUrl,
@@ -1558,7 +1880,6 @@ app.post(
                 newVideo
             );
 
-
             // =================================================
             // DELETE TEMP VIDEO
             // =================================================
@@ -1586,7 +1907,6 @@ app.post(
                     deleteVideoError.message
                 );
             }
-
 
             // =================================================
             // DELETE TEMP THUMBNAIL
@@ -1616,7 +1936,6 @@ app.post(
                 );
             }
 
-
             // =================================================
             // ADD RUNTIME VCDN ID
             // =================================================
@@ -1632,7 +1951,6 @@ app.post(
                     vcdn.videoId
                 );
             }
-
 
             console.log(
                 "VIDEO SAVED TO NEON:",
@@ -1655,10 +1973,10 @@ app.post(
                 newVideo.embed_url
             );
 
-
             return res.json({
 
-                success: true,
+                success:
+                    true,
 
                 video:
                     newVideo
@@ -1670,7 +1988,6 @@ app.post(
                 "UPLOAD ERROR:",
                 error
             );
-
 
             // =================================================
             // CLEAN VIDEO TEMP
@@ -1692,7 +2009,6 @@ app.post(
 
             } catch {}
 
-
             // =================================================
             // CLEAN THUMBNAIL TEMP
             // =================================================
@@ -1713,10 +2029,10 @@ app.post(
 
             } catch {}
 
-
             return res.status(500).json({
 
-                success: false,
+                success:
+                    false,
 
                 message:
                     error.message ||
@@ -1726,33 +2042,157 @@ app.post(
     }
 );
 
-
 // =====================================================
-// DELETE VIDEO
+// UPDATE VIDEO CATEGORY
 // =====================================================
 
-app.post(
+app.put(
 
-    "/api/delete",
+    "/api/videos/:id/category",
+
+    requireAdmin,
 
     async (req, res) => {
 
         try {
 
             const id =
-                req.body.id ||
-                req.body.videoId;
+                String(
+                    req.params.id
+                );
 
-            if (!id) {
+            const category =
+                String(
+                    req.body.category || ""
+                ).trim();
+
+            if (!category) {
 
                 return res.status(400).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
-                        "Video ID missing"
+                        "Category is required"
                 });
             }
+
+            const allowedCategories = [
+
+                "Japanese Mom",
+
+                "Brazzur Mom",
+
+                "Bangladesh Video",
+
+                "Indian Video"
+
+            ];
+
+            if (
+                !allowedCategories.includes(
+                    category
+                )
+            ) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Invalid category"
+                });
+            }
+
+            const result =
+                await pool.query(
+
+                    `
+
+                    UPDATE videos
+
+                    SET category = $1
+
+                    WHERE id = $2
+
+                    RETURNING *
+
+                    `,
+
+                    [
+
+                        category,
+
+                        id
+
+                    ]
+                );
+
+            if (
+                result.rows.length === 0
+            ) {
+
+                return res.status(404).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Video not found"
+                });
+            }
+
+            return res.json({
+
+                success:
+                    true,
+
+                video:
+                    rowToVideo(
+                        result.rows[0]
+                    )
+            });
+
+        } catch (error) {
+
+            console.error(
+                "CATEGORY UPDATE ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+
+                success:
+                    false,
+
+                message:
+                    error.message ||
+                    "Category update failed"
+            });
+        }
+    }
+);
+
+// =====================================================
+// DELETE VIDEO - ADMIN PANEL
+// =====================================================
+
+app.delete(
+
+    "/api/videos/:id",
+
+    requireAdmin,
+
+    async (req, res) => {
+
+        try {
+
+            const id =
+                String(
+                    req.params.id
+                );
 
             const video =
                 await getVideoById(
@@ -1763,13 +2203,13 @@ app.post(
 
                 return res.status(404).json({
 
-                    success: false,
+                    success:
+                        false,
 
                     message:
                         "Video not found"
                 });
             }
-
 
             // =================================================
             // DELETE FROM VCDN
@@ -1817,7 +2257,6 @@ app.post(
                 }
             }
 
-
             // =================================================
             // DELETE LOCAL THUMBNAIL
             // =================================================
@@ -1834,7 +2273,9 @@ app.post(
 
                 const thumbnailPath =
                     path.join(
+
                         __dirname,
+
                         video.thumbnail
                     );
 
@@ -1854,10 +2295,163 @@ app.post(
                 } catch {}
             }
 
-
             // =================================================
             // DELETE FROM NEON
             // =================================================
+
+            await deleteVideoFromDatabase(
+                id
+            );
+
+            return res.json({
+
+                success:
+                    true
+            });
+
+        } catch (error) {
+
+            console.error(
+                "ADMIN DELETE ERROR:",
+                error
+            );
+
+            return res.status(500).json({
+
+                success:
+                    false,
+
+                message:
+                    error.message ||
+                    "Delete failed"
+            });
+        }
+    }
+);
+
+// =====================================================
+// OLD DELETE API
+// =====================================================
+
+app.post(
+
+    "/api/delete",
+
+    requireAdmin,
+
+    async (req, res) => {
+
+        try {
+
+            const id =
+                req.body.id ||
+                req.body.videoId;
+
+            if (!id) {
+
+                return res.status(400).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Video ID missing"
+                });
+            }
+
+            const video =
+                await getVideoById(
+                    id
+                );
+
+            if (!video) {
+
+                return res.status(404).json({
+
+                    success:
+                        false,
+
+                    message:
+                        "Video not found"
+                });
+            }
+
+            const vcdnId =
+                video.vcdn_id ||
+                video.vcdnId;
+
+            if (
+                VCDN_API_KEY &&
+                vcdnId
+            ) {
+
+                try {
+
+                    const response =
+                        await fetch(
+
+                            `${VCDN_BASE_URL}/api/v1/videos/${vcdnId}`,
+
+                            {
+
+                                method:
+                                    "DELETE",
+
+                                headers:
+                                    vcdnHeaders()
+                            }
+                        );
+
+                    console.log(
+                        "VCDN DELETE STATUS:",
+                        response.status
+                    );
+
+                } catch (
+                    deleteError
+                ) {
+
+                    console.error(
+                        "VCDN DELETE ERROR:",
+                        deleteError.message
+                    );
+                }
+            }
+
+            if (
+
+                video.thumbnail &&
+
+                video.thumbnail.startsWith(
+                    "/uploads/thumbnails/"
+                )
+
+            ) {
+
+                const thumbnailPath =
+                    path.join(
+
+                        __dirname,
+
+                        video.thumbnail
+
+                    );
+
+                try {
+
+                    if (
+                        fs.existsSync(
+                            thumbnailPath
+                        )
+                    ) {
+
+                        fs.unlinkSync(
+                            thumbnailPath
+                        );
+                    }
+
+                } catch {}
+            }
 
             await deleteVideoFromDatabase(
                 id
@@ -1878,7 +2472,8 @@ app.post(
 
             return res.status(500).json({
 
-                success: false,
+                success:
+                    false,
 
                 message:
                     error.message ||
@@ -1888,12 +2483,12 @@ app.post(
     }
 );
 
-
 // =====================================================
 // HEALTH
 // =====================================================
 
 app.get(
+
     "/api/health",
 
     async (req, res) => {
@@ -1941,12 +2536,12 @@ app.get(
     }
 );
 
-
 // =====================================================
 // HOME
 // =====================================================
 
 app.get(
+
     "/",
 
     (req, res) => {
@@ -1957,11 +2552,9 @@ app.get(
                 __dirname,
                 "index.html"
             )
-
         );
     }
 );
-
 
 // =====================================================
 // START SERVER
@@ -1977,20 +2570,17 @@ async function startServer() {
 
         await initDatabase();
 
-
         // -----------------------------------------------
         // OLD JSON → NEON
         // -----------------------------------------------
 
         await migrateOldJsonToNeon();
 
-
         // -----------------------------------------------
         // VCDN RECOVERY
         // -----------------------------------------------
 
         await recoverVideosFromVCDN();
-
 
         // -----------------------------------------------
         // START EXPRESS
@@ -2035,6 +2625,11 @@ async function startServer() {
                 console.log(
                     "VCDN Project:",
                     VCDN_PROJECT_ID
+                );
+
+                console.log(
+                    "ADMIN:",
+                    "READY"
                 );
 
                 console.log(
