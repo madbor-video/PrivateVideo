@@ -661,9 +661,8 @@ function makeVideoFromVcdn(
         "";
 
     // IMPORTANT:
-    // Keep existing Neon thumbnail first.
-    // This prevents VCDN recovery from replacing
-    // our permanent thumbnail.
+    // Existing Neon thumbnail gets priority.
+    // VCDN recovery will not replace it.
 
     const thumbnail =
         oldVideo?.thumbnail ||
@@ -1884,6 +1883,295 @@ app.put(
 );
 
 // =====================================================
+// UPDATE VIDEO THUMBNAIL
+// =====================================================
+
+app.put(
+    "/api/videos/:id/thumbnail",
+
+    requireAdmin,
+
+    upload.single("thumbnail"),
+
+    async (req, res) => {
+
+        let thumbnailTempPath =
+            null;
+
+        try {
+
+            const videoId =
+                String(
+                    req.params.id
+                );
+
+            const thumbnailFile =
+                req.file;
+
+            if (!thumbnailFile) {
+
+                return res.status(400).json({
+                    success: false,
+                    message:
+                        "Thumbnail file is required."
+                });
+            }
+
+            thumbnailTempPath =
+                thumbnailFile.path;
+
+            // =================================================
+            // CHECK THUMBNAIL SIZE
+            // =================================================
+
+            const thumbnailStats =
+                fs.statSync(
+                    thumbnailFile.path
+                );
+
+            const thumbnailSize =
+                Number(
+                    thumbnailStats.size
+                );
+
+            if (
+                !Number.isFinite(
+                    thumbnailSize
+                ) ||
+                thumbnailSize <= 0
+            ) {
+
+                throw new Error(
+                    "Thumbnail file is empty."
+                );
+            }
+
+            // =================================================
+            // CHECK EXTENSION
+            // =================================================
+
+            const extension =
+                path.extname(
+                    thumbnailFile.originalname
+                ).toLowerCase();
+
+            const allowedExtensions = [
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".webp",
+                ".gif"
+            ];
+
+            if (
+                !allowedExtensions.includes(
+                    extension
+                )
+            ) {
+
+                throw new Error(
+                    "Invalid thumbnail format. Use JPG, JPEG, PNG, WEBP or GIF."
+                );
+            }
+
+            // =================================================
+            // MIME TYPE
+            // =================================================
+
+            let mimeType =
+                "image/jpeg";
+
+            if (
+                extension === ".png"
+            ) {
+
+                mimeType =
+                    "image/png";
+
+            } else if (
+                extension === ".webp"
+            ) {
+
+                mimeType =
+                    "image/webp";
+
+            } else if (
+                extension === ".gif"
+            ) {
+
+                mimeType =
+                    "image/gif";
+
+            } else if (
+                extension === ".jpg" ||
+                extension === ".jpeg"
+            ) {
+
+                mimeType =
+                    "image/jpeg";
+            }
+
+            // =================================================
+            // FIND EXISTING VIDEO
+            // =================================================
+
+            const existingVideo =
+                await getVideoById(
+                    videoId
+                );
+
+            if (!existingVideo) {
+
+                return res.status(404).json({
+                    success: false,
+                    message:
+                        "Video not found."
+                });
+            }
+
+            // =================================================
+            // READ THUMBNAIL
+            // =================================================
+
+            const thumbnailBuffer =
+                fs.readFileSync(
+                    thumbnailFile.path
+                );
+
+            if (
+                !thumbnailBuffer ||
+                thumbnailBuffer.length <= 0
+            ) {
+
+                throw new Error(
+                    "Thumbnail file is empty."
+                );
+            }
+
+            // =================================================
+            // CONVERT TO BASE64
+            // =================================================
+
+            const thumbnailBase64 =
+                thumbnailBuffer.toString(
+                    "base64"
+                );
+
+            const thumbnailUrl =
+                `data:${mimeType};base64,${thumbnailBase64}`;
+
+            // =================================================
+            // UPDATE ONLY THUMBNAIL
+            // KEEP EVERYTHING ELSE
+            // =================================================
+
+            const updatedVideo = {
+                ...existingVideo,
+
+                thumbnail:
+                    thumbnailUrl
+            };
+
+            await saveVideo(
+                updatedVideo
+            );
+
+            // =================================================
+            // DELETE TEMP THUMBNAIL
+            // =================================================
+
+            try {
+
+                if (
+                    thumbnailTempPath &&
+                    fs.existsSync(
+                        thumbnailTempPath
+                    )
+                ) {
+
+                    fs.unlinkSync(
+                        thumbnailTempPath
+                    );
+                }
+
+            } catch (
+                cleanupError
+            ) {
+
+                console.log(
+                    "Thumbnail temp cleanup skipped:",
+                    cleanupError.message
+                );
+            }
+
+            thumbnailTempPath =
+                null;
+
+            console.log(
+                "THUMBNAIL UPDATED:",
+                videoId
+            );
+
+            console.log(
+                "THUMBNAIL SIZE:",
+                thumbnailBuffer.length,
+                "bytes"
+            );
+
+            console.log(
+                "THUMBNAIL STORAGE:",
+                "PERMANENT NEON"
+            );
+
+            return res.json({
+                success: true,
+
+                message:
+                    "Thumbnail updated successfully.",
+
+                video:
+                    updatedVideo
+            });
+
+        } catch (error) {
+
+            console.error(
+                "THUMBNAIL UPDATE ERROR:",
+                error
+            );
+
+            // =================================================
+            // CLEAN TEMP FILE
+            // =================================================
+
+            if (
+                thumbnailTempPath &&
+                fs.existsSync(
+                    thumbnailTempPath
+                )
+            ) {
+
+                try {
+
+                    fs.unlinkSync(
+                        thumbnailTempPath
+                    );
+
+                } catch {}
+            }
+
+            return res.status(500).json({
+                success: false,
+
+                message:
+                    error.message ||
+                    "Thumbnail update failed."
+            });
+        }
+    }
+);
+
+// =====================================================
 // DELETE VIDEO - ADMIN PANEL
 // =====================================================
 
@@ -1957,7 +2245,7 @@ app.delete(
             }
 
             // =================================================
-            // DELETE OLD LOCAL THUMBNAIL IF IT EXISTS
+            // DELETE OLD LOCAL THUMBNAIL
             // =================================================
 
             if (
@@ -2272,6 +2560,11 @@ async function startServer() {
                 console.log(
                     "THUMBNAILS:",
                     "PERMANENT NEON STORAGE"
+                );
+
+                console.log(
+                    "OLD THUMBNAIL UPDATE:",
+                    "ENABLED"
                 );
 
                 console.log(
